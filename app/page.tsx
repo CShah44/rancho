@@ -1,103 +1,151 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import {
+  Brain,
+  Quote as BookQuote,
+  Video,
+  Paperclip,
+  SendHorizontal,
+  Globe,
+  MessageCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { useChat } from "@ai-sdk/react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [mode, setMode] = useState("chat");
+  const { messages, input, handleInputChange, handleSubmit } = useChat({
+    api: "/api/chat",
+    onError: (error) => {
+      console.error(error);
+    },
+    onFinish: (message) => {
+      console.log(message);
+    },
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const modes = {
+    chat: {
+      icon: MessageCircle,
+      label: "Chat",
+      color: "text-yellow-500",
+    },
+    search: {
+      icon: Globe,
+      label: "Search",
+      color: "text-blue-500",
+    },
+    reasoning: {
+      icon: Brain,
+      label: "Reasoning",
+      color: "text-green-500",
+    },
+    quiz: {
+      icon: BookQuote,
+      label: "Quiz",
+      color: "text-purple-500",
+    },
+    video: {
+      icon: Video,
+      label: "Video",
+      color: "text-red-500",
+    },
+  };
+
+  return (
+    <main className="min-h-screen bg-zinc-900 flex flex-col items-center px-4">
+      <div className="w-full max-w-4xl flex flex-col h-screen pt-8 pb-4">
+        {messages.length <= 0 ? (
+          <div className="text-center space-y-4 flex-grow flex flex-col justify-center">
+            <h1 className="text-4xl font-bold text-white">Good evening.</h1>
+            <p className="text-2xl text-zinc-400">
+              I&apos;m Rancho and I&apos;m here to change how you learn.
+            </p>
+          </div>
+        ) : (
+          <div className="flex-grow overflow-y-auto mb-4 space-y-6">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  "p-4 rounded-lg max-w-[80%]",
+                  message.role === "user"
+                    ? "bg-blue-600 text-white ml-auto"
+                    : "bg-zinc-800 text-white"
+                )}
+              >
+                {message.parts.map((part, i) => {
+                  switch (part.type) {
+                    case "text":
+                      return (
+                        <div
+                          key={`${message.id}-${i}`}
+                          className="whitespace-pre-wrap"
+                        >
+                          {part.text}
+                        </div>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="relative">
+          <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 shadow-xl">
+            <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+              <div className="flex bg-zinc-700/50 rounded-full p-1">
+                {Object.entries(modes).map(([key, value]) => {
+                  const isActive = mode === key;
+                  const Icon = value.icon;
+
+                  return (
+                    <Button
+                      key={key}
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "flex items-center gap-2 rounded-full transition-all",
+                        isActive
+                          ? "bg-zinc-600 text-white"
+                          : "hover:bg-zinc-600/50 text-zinc-400"
+                      )}
+                      onClick={() => setMode(key)}
+                    >
+                      <Icon className={isActive ? value.color : ""} size={18} />
+                      <span>{value.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <Input
+                placeholder="What do you want to know?"
+                value={input}
+                onChange={handleInputChange}
+                className="bg-zinc-700/50 border-zinc-600 text-white placeholder:text-zinc-400"
+              />
+              <Button variant="ghost" size="icon">
+                <Paperclip className="text-zinc-400" size={20} />
+              </Button>
+              <Button
+                type="submit"
+                className="bg-white hover:bg-white/90 text-black"
+              >
+                <SendHorizontal size={20} />
+              </Button>
+            </form>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
