@@ -7,7 +7,8 @@ import {
   Video,
   Paperclip,
   SendHorizontal,
-  Globe,
+  // Globe,
+  LinkIcon,
   MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,11 +43,11 @@ export default function Home() {
       label: "Chat",
       color: "text-yellow-500",
     },
-    search: {
-      icon: Globe,
-      label: "Search",
-      color: "text-blue-500",
-    },
+    // search: {
+    //   icon: Globe,
+    //   label: "Search",
+    //   color: "text-blue-500",
+    // },
     reasoning: {
       icon: Brain,
       label: "Reasoning",
@@ -124,6 +125,35 @@ export default function Home() {
                               className="prose prose-invert max-w-none"
                             >
                               <Markdown text={part.text} />
+                            </div>
+                          );
+                        case "reasoning":
+                          return (
+                            <div
+                              key={`${message.id}-${i}`}
+                              className="flex items-center space-x-2 space-y-1"
+                            >
+                              <Brain size={16} />
+                              <div className="text-sm text-zinc-400">
+                                {part.reasoning}
+                              </div>
+                            </div>
+                          );
+                        case "source":
+                          return (
+                            <div
+                              key={`${message.id}-${i}`}
+                              className="flex items-center space-x-2 space-y-1"
+                            >
+                              <LinkIcon size={16} />
+                              <a
+                                href={part.source.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm text-zinc-400 hover:underline"
+                              >
+                                {part.source.title}
+                              </a>
                             </div>
                           );
                         default:
