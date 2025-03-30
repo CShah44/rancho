@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Brain,
   Quote as BookQuote,
@@ -14,18 +14,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
+import Markdown from "@/components/shared/Markdown";
 
 export default function Home() {
   const [mode, setMode] = useState("chat");
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
-    api: "/api/chat",
-    onError: (error) => {
-      console.error(error);
-    },
-    onFinish: (message) => {
-      console.log(message);
-    },
-  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { messages, input, handleInputChange, handleSubmit, status, error } =
+    useChat({
+      api: "/api/chat",
+      onError: (error) => {
+        console.error(error);
+      },
+      onFinish: (message) => {
+        console.log(message);
+      },
+    });
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   const modes = {
     chat: {
@@ -59,47 +68,110 @@ export default function Home() {
     <main className="min-h-screen bg-zinc-900 flex flex-col items-center px-4">
       <div className="w-full max-w-4xl flex flex-col h-screen pt-8 pb-4">
         {messages.length <= 0 ? (
-          <div className="text-center space-y-4 flex-grow flex flex-col justify-center">
-            <h1 className="text-4xl font-bold text-white">Good evening.</h1>
-            <p className="text-2xl text-zinc-400">
+          <div className="text-center space-y-6 flex-grow flex flex-col justify-center">
+            <h1 className="text-5xl font-bold text-white font-grotesk tracking-tight">
+              Good evening.
+            </h1>
+            <p className="text-2xl text-zinc-400 font-sans">
               I&apos;m Rancho and I&apos;m here to change how you learn.
             </p>
-          </div>
-        ) : (
-          <div className="flex-grow overflow-y-auto mb-4 space-y-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "p-4 rounded-lg max-w-[80%]",
-                  message.role === "user"
-                    ? "bg-blue-600 text-white ml-auto"
-                    : "bg-zinc-800 text-white"
-                )}
-              >
-                {message.parts.map((part, i) => {
-                  switch (part.type) {
-                    case "text":
-                      return (
-                        <div
-                          key={`${message.id}-${i}`}
-                          className="whitespace-pre-wrap"
-                        >
-                          {part.text}
-                        </div>
-                      );
-                    default:
-                      return null;
-                  }
+            <div className="flex justify-center mt-8">
+              <div className="bg-zinc-800/50 backdrop-blur-sm p-3 rounded-full">
+                {Object.entries(modes).map(([key, value]) => {
+                  const Icon = value.icon;
+                  return (
+                    <Button
+                      key={key}
+                      variant="ghost"
+                      size="sm"
+                      className="mx-1 rounded-full hover:bg-zinc-700/50"
+                    >
+                      <Icon className={value.color} size={20} />
+                    </Button>
+                  );
                 })}
               </div>
-            ))}
+            </div>
+          </div>
+        ) : (
+          <div
+            className="flex-grow overflow-y-auto mb-4 px-2"
+            style={{ scrollbarWidth: "none" }}
+          >
+            <div className="space-y-6 py-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "p-4 rounded-2xl max-w-[85%] shadow-md transition-all duration-200",
+                      message.role === "user"
+                        ? "bg-blue-600 text-white rounded-tr-none"
+                        : "bg-zinc-800/80 text-white rounded-tl-none border border-zinc-700/50"
+                    )}
+                  >
+                    {message.parts.map((part, i) => {
+                      switch (part.type) {
+                        case "text":
+                          return (
+                            <div
+                              key={`${message.id}-${i}`}
+                              className="prose prose-invert max-w-none"
+                            >
+                              <Markdown text={part.text} />
+                            </div>
+                          );
+                        default:
+                          return null;
+                      }
+                    })}
+                  </div>
+                </div>
+              ))}
+              {error && (
+                <div className="flex justify-center">
+                  <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg max-w-[85%]">
+                    An error occurred. Please try again.
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
           </div>
         )}
 
         <div className="relative">
-          <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 shadow-xl">
-            <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+          <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 shadow-xl border border-zinc-700/30">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <Input
+                placeholder="What do you want to know?"
+                value={input}
+                onChange={handleInputChange}
+                className="bg-zinc-700/50 border-zinc-600 text-white placeholder:text-zinc-400 focus-visible:ring-zinc-500 rounded-xl"
+                disabled={status === "streaming"}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-zinc-700/50 rounded-xl"
+                type="button"
+              >
+                <Paperclip className="text-zinc-400" size={20} />
+              </Button>
+              <Button
+                type="submit"
+                className="bg-white hover:bg-white/90 text-black rounded-xl transition-all duration-200 hover:shadow-lg disabled:opacity-50"
+                disabled={status === "streaming" || !input.trim()}
+              >
+                <SendHorizontal size={20} />
+              </Button>
+            </form>
+            <div className="flex items-center gap-2 mt-3 overflow-x-auto">
               <div className="flex bg-zinc-700/50 rounded-full p-1">
                 {Object.entries(modes).map(([key, value]) => {
                   const isActive = mode === key;
@@ -125,24 +197,6 @@ export default function Home() {
                 })}
               </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input
-                placeholder="What do you want to know?"
-                value={input}
-                onChange={handleInputChange}
-                className="bg-zinc-700/50 border-zinc-600 text-white placeholder:text-zinc-400"
-              />
-              <Button variant="ghost" size="icon">
-                <Paperclip className="text-zinc-400" size={20} />
-              </Button>
-              <Button
-                type="submit"
-                className="bg-white hover:bg-white/90 text-black"
-              >
-                <SendHorizontal size={20} />
-              </Button>
-            </form>
           </div>
         </div>
       </div>
