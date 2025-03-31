@@ -10,26 +10,38 @@ import {
   // Globe,
   LinkIcon,
   MessageCircle,
+  Loader2,
+  // StopCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
-import Markdown from "@/components/shared/Markdown";
+import { MemoizedMarkdown } from "@/components/shared/memoized-markdown";
 
 export default function Home() {
   const [mode, setMode] = useState("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, input, handleInputChange, handleSubmit, status, error } =
-    useChat({
-      api: "/api/chat",
-      onError: (error) => {
-        console.error(error);
-      },
-      onFinish: (message) => {
-        console.log(message);
-      },
-    });
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    status,
+    error,
+    // stop,
+  } = useChat({
+    id: "chat",
+    api: "/api/chat",
+    experimental_throttle: 50,
+    onError: (error) => {
+      console.error(error.message);
+    },
+    onToolCall: (toolCall) => {
+      console.log(toolCall);
+    },
+  });
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -122,9 +134,29 @@ export default function Home() {
                           return (
                             <div
                               key={`${message.id}-${i}`}
-                              className="prose prose-invert max-w-none"
+                              className="prose max-w-none"
                             >
-                              <Markdown text={part.text} />
+                              {/* <Markdown text={part.text} /> */}
+                              <MemoizedMarkdown
+                                content={part.text}
+                                id={message.id}
+                              />
+                            </div>
+                          );
+                        case "tool-invocation":
+                          console.log(part.toolInvocation);
+                          return (
+                            <div
+                              key={`${message.id}-${i}`}
+                              className="flex items-center space-x-2 space-y-1"
+                            >
+                              <Paperclip size={16} />
+                              <div className="text-sm text-zinc-400">
+                                {part.toolInvocation.state}
+                              </div>
+                              <div className="text-sm text-zinc-300">
+                                {part.toolInvocation.step}
+                              </div>
                             </div>
                           );
                         case "reasoning":
@@ -163,6 +195,16 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+              {status === "streaming" && (
+                <div className="flex justify-center">
+                  <div className="bg-zinc-800/50 backdrop-blur-sm p-3 rounded-lg max-w-[85%]">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="animate-spin" size={20} />
+                      <div className="text-sm text-zinc-400">Thinking...</div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {error && (
                 <div className="flex justify-center">
                   <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg max-w-[85%]">
@@ -198,7 +240,11 @@ export default function Home() {
                 className="bg-white hover:bg-white/90 text-black rounded-xl transition-all duration-200 hover:shadow-lg disabled:opacity-50"
                 disabled={status === "streaming" || !input.trim()}
               >
-                <SendHorizontal size={20} />
+                {status === "streaming" ? (
+                  <Loader2 size={20} />
+                ) : (
+                  <SendHorizontal size={20} />
+                )}
               </Button>
             </form>
             <div className="flex items-center gap-2 mt-3 overflow-x-auto">
