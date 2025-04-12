@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Space_Grotesk, DM_Sans } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,10 +8,12 @@ const inter = Inter({
   display: "swap",
 });
 
+const dmSans = DM_Sans({
+  variable: "--font-secondary",
+});
+
 const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  display: "swap",
+  variable: "--font-main",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.className} ${inter.variable} font-sans antialiased`}
+        className={`${spaceGrotesk.className} ${dmSans.variable} ${inter.variable} font-sans antialiased`}
       >
         {children}
       </body>

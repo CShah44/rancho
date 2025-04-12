@@ -7,17 +7,19 @@ import {
   Video,
   Paperclip,
   SendHorizontal,
-  // Globe,
+  Globe,
   LinkIcon,
   MessageCircle,
   Loader2,
   // StopCircle,
+  ChartArea,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
 import { MemoizedMarkdown } from "@/components/shared/memoized-markdown";
+import Image from "next/image";
 
 export default function Home() {
   const [mode, setMode] = useState("chat");
@@ -34,12 +36,14 @@ export default function Home() {
   } = useChat({
     id: "chat",
     api: "/api/chat",
-    experimental_throttle: 50,
+    body: {
+      search: mode === "search",
+    },
     onError: (error) => {
       console.error(error.message);
     },
     onToolCall: (toolCall) => {
-      console.log(toolCall);
+      console.log(toolCall.toolCall.toolName);
     },
   });
 
@@ -55,11 +59,11 @@ export default function Home() {
       label: "Chat",
       color: "text-yellow-500",
     },
-    // search: {
-    //   icon: Globe,
-    //   label: "Search",
-    //   color: "text-blue-500",
-    // },
+    search: {
+      icon: Globe,
+      label: "Search",
+      color: "text-blue-500",
+    },
     reasoning: {
       icon: Brain,
       label: "Reasoning",
@@ -85,7 +89,7 @@ export default function Home() {
             <h1 className="text-5xl font-bold text-white font-grotesk tracking-tight">
               Good evening.
             </h1>
-            <p className="text-2xl text-zinc-400 font-sans">
+            <p className="text-2xl text-zinc-400">
               I&apos;m Rancho and I&apos;m here to change how you learn.
             </p>
             <div className="flex justify-center mt-8">
@@ -150,12 +154,16 @@ export default function Home() {
                               key={`${message.id}-${i}`}
                               className="flex items-center space-x-2 space-y-1"
                             >
-                              <Paperclip size={16} />
+                              <ChartArea size={16} />
                               <div className="text-sm text-zinc-400">
-                                {part.toolInvocation.state}
-                              </div>
-                              <div className="text-sm text-zinc-300">
-                                {part.toolInvocation.step}
+                                {part.toolInvocation.state === "result" && (
+                                  <Image
+                                    src={`data:image/png;base64,${part.toolInvocation.result[0].png}`}
+                                    width={500}
+                                    height={100}
+                                    alt="result"
+                                  />
+                                )}
                               </div>
                             </div>
                           );
@@ -172,6 +180,7 @@ export default function Home() {
                             </div>
                           );
                         case "source":
+                          if (!part.source) return null;
                           return (
                             <div
                               key={`${message.id}-${i}`}
@@ -188,6 +197,7 @@ export default function Home() {
                               </a>
                             </div>
                           );
+
                         default:
                           return null;
                       }

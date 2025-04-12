@@ -9,11 +9,11 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, search } = await req.json();
 
     const result = streamText({
       model: google("gemini-2.0-flash-001", {
-        useSearchGrounding: true,
+        useSearchGrounding: search,
       }),
       system: `
         You are a high school teacher at the Dhirubhai Ambani International School. You only teach science and mathematics.
@@ -55,7 +55,6 @@ export async function POST(req: Request) {
               ),
           }),
           execute: async ({ code }) => {
-            console.log("I AM HERE FIRST");
             // Create a sandbox, execute visualization code, and return the result
             const sandbox = await Sandbox.create({
               apiKey: process.env.E2B_API_KEY,
@@ -63,45 +62,55 @@ export async function POST(req: Request) {
 
             // Install Plotly and supporting libraries
             await sandbox.runCode(`
-import sys
-!{sys.executable} -m pip install plotly numpy sympy pandas kaleido
-          `);
+        import sys
+        !{sys.executable} -m pip install plotly numpy sympy pandas kaleido
+            `);
 
             // Add template code to ensure proper static image rendering with Plotly
             const enhancedCode = `
-import plotly.graph_objects as go
-import plotly.express as px
-import plotly.io as pio
-import numpy as np
-from IPython.display import Image, display
-import io
-
-# Set renderer to generate high-quality static images
-pio.renderers.default = "png"
-
-# Execute the visualization code
-${code}
-
-# If the code doesn't explicitly save the figure, try to capture the last created figure
-try:
-    # Check if 'fig' exists in the local namespace
-    if 'fig' in locals():
-        img_bytes = pio.to_image(fig, format="png", width=800, height=600, scale=2)
-        display(Image(img_bytes))
-except Exception as e:
-    print(f"Error generating visualization: {e}")
-          `;
-
-            console.log("I AM HERE");
+        import plotly.graph_objects as go
+        import plotly.express as px
+        import plotly.io as pio
+        import numpy as np
+        import base64
+        from IPython.display import Image, display
+        import io
+        
+        # Set renderer to generate high-quality static images
+        pio.renderers.default = "png"
+        
+        # Execute the visualization code
+        ${code}
+        
+        # If the code doesn't explicitly save the figure, try to capture the last created figure
+        try:
+            # Check if 'fig' exists in the local namespace
+            if 'fig' in locals():
+                img_bytes = pio.to_image(fig, format="png", width=800, height=600, scale=2)
+                # Convert bytes to base64 string for easier handling in JavaScript
+                base64_img = base64.b64encode(img_bytes).decode('utf-8')
+                print(f"BASE64_IMAGE_START:{base64_img}:BASE64_IMAGE_END")
+        except Exception as e:
+            print(f"Error generating visualization: {e}")
+            `;
 
             // Run the enhanced visualization code
-            const { text, results, logs, error } = await sandbox.runCode(
-              enhancedCode
+            const { text } = await sandbox.runCode(enhancedCode);
+
+            // Extract the base64 image data from the output
+            const base64Match = text?.match(
+              /BASE64_IMAGE_START:([^]*?):BASE64_IMAGE_END/
             );
 
-            console.log(text, logs, error);
-
-            return results || text;
+            if (base64Match && base64Match[1]) {
+              // Return a properly structured object with the base64 image data
+              return [{ png: base64Match[1] }];
+            } else {
+              // Return an error message if no image was generated
+              return [
+                { error: "Failed to generate visualization", details: text },
+              ];
+            }
           },
         },
       },
