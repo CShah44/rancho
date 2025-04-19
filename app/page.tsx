@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
 import { MemoizedMarkdown } from "@/components/shared/memoized-markdown";
-import Image from "next/image";
+// import Image from "next/image";
 
 export default function Home() {
   const [mode, setMode] = useState("chat");
@@ -156,14 +156,7 @@ export default function Home() {
                             >
                               <ChartArea size={16} />
                               <div className="text-sm text-zinc-400">
-                                {part.toolInvocation.state === "result" && (
-                                  <Image
-                                    src={`data:image/png;base64,${part.toolInvocation.result[0].png}`}
-                                    width={500}
-                                    height={100}
-                                    alt="result"
-                                  />
-                                )}
+                                {part.toolInvocation.toolName}
                               </div>
                             </div>
                           );

@@ -1,11 +1,10 @@
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import z from "zod";
-import { Sandbox } from "@e2b/code-interpreter";
 import { NextResponse } from "next/server";
 
-// Allow streaming responses up to 30 seconds
-export const maxDuration = 30;
+// Allow streaming responses up to 60 seconds for video generation
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -16,100 +15,186 @@ export async function POST(req: Request) {
         useSearchGrounding: search,
       }),
       system: `
-        You are a high school teacher at the Dhirubhai Ambani International School. You only teach science and mathematics.
-        Your method of teaching is completely focused on using creativity and intuitive learning.
-        However, ocassionally include some formal definitions and equations since they might be required for students.
-        Answer only relevant questions and deny any questions that are not relevant to them as a student.
-        Exceptions are when students want to know about current affairs and latest advancements in science and technology.
-
-        Use your markdown response ability to the fullest and make creative responses.
-        The responses should not be very long. Students don't like long responses.
-
-        When teaching physics, use physics_tool to create helpful visual aids.
-        When teaching coordinate geometry, vectors, or any mathematical concept that can be visualized, use the graph_visualization tool to create helpful visual aids.
-        `,
+        You are Rancho, an exceptional and innovative high school science and mathematics teacher at Dhirubhai Ambani International School.
+        Your teaching philosophy emphasizes:
+        - Creative problem-solving and intuitive understanding over rote memorization
+        - Visual and interactive learning experiences that make complex concepts simple
+        - Practical applications that demonstrate real-world relevance
+        - Concise, engaging explanations that maintain student interest
+        
+        Include formal definitions and equations when necessary, but always explain them in intuitive ways.
+        
+        Answer questions related to science, mathematics, technology, and current scientific advancements.
+        Politely decline to answer questions unrelated to these domains or inappropriate for a high school setting.
+        
+        Your responses should:
+        - Be concise (students prefer shorter, impactful explanations)
+        - Use markdown formatting effectively (headings, bullet points, bold for emphasis)
+        - Include analogies and metaphors that make concepts relatable
+        - Suggest visualization opportunities when explaining complex topics
+        
+        You have access to two visualization tools:
+        1. Video animations - These are high-quality educational animations that illustrate concepts dynamically
+        2. Images - These are static visuals that can help explain concepts or provide examples
+        
+        Prioritize using video animations when explaining complex concepts that benefit from dynamic visualization.
+        Use images when a static visual would suffice or when specifically requested by the student.
+        
+        When appropriate, recommend creating a visualization to illustrate concepts. The video tool is generally more effective for explaining scientific and mathematical concepts as it can show processes and transformations over time.
+      `,
       messages,
       tools: {
-        physics_tool: {
-          description: "This tool is used to solve physics problems.",
-          parameters: z.object({
-            concept: z
-              .string()
-              .describe("The name of the physics concept to be visualized."),
-          }),
-          execute: async ({ concept }) => {
-            // dummy implementation
-            return (
-              "The physics visualization tool is not implemented yet." + concept
-            );
+        video: {
+          description:
+            "Generate educational animations that illustrate scientific or mathematical concepts. The animations will be rendered as videos and returned to the student.",
+          parameters: z.object(
+            {
+              title: z
+                .string()
+                .describe(
+                  "Descriptive title for the animation that clearly indicates the concept being visualized."
+                ),
+              description: z
+                .string()
+                .describe(
+                  "Detailed description of the concept to be taught and visualized. This should include the specific scientific or mathematical concept, key principles, and any important aspects that should be highlighted in the visualization. Be comprehensive as this will be used to generate the educational animation."
+                ),
+            },
+            {
+              required_error: "Title and description are required",
+              invalid_type_error: "Title and description must be strings",
+            }
+          ),
+          execute: async ({ title, description }) => {
+            console.log(description);
+
+            try {
+              // Call the FastAPI backend to generate the video
+              const response = await fetch(
+                "http://localhost:8000/explain-concept",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ description }),
+                }
+              );
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Error from FastAPI backend:", errorText);
+                return {
+                  type: "text",
+                  text: `Error generating animation: ${errorText}`,
+                };
+              }
+
+              const data = await response.json();
+              const videoUrl = data.video_url;
+              const explanation = data.explanation;
+
+              if (!videoUrl) {
+                return {
+                  type: "text",
+                  text: "Animation generated but video URL not found. Please try again.",
+                };
+              }
+
+              return {
+                type: "video",
+                title: title,
+                videoUrl: videoUrl,
+                explanation: explanation,
+                mimeType: "video/mp4",
+              };
+            } catch (error) {
+              console.error("Error in video generation:", error);
+              return {
+                type: "text",
+                text: `Failed to generate animation: ${error}`,
+              };
+            }
           },
         },
-        graph_visualization: {
+        image: {
           description:
-            "Generate interactive mathematical visualizations using Plotly python code.",
-          parameters: z.object({
-            code: z
-              .string()
-              .describe(
-                "Python code that generates a visualization using Plotly. The code should create clear, educational visualizations with proper labels, titles, and colors."
-              ),
-          }),
-          execute: async ({ code }) => {
-            // Create a sandbox, execute visualization code, and return the result
-            const sandbox = await Sandbox.create({
-              apiKey: process.env.E2B_API_KEY,
+            "Search for relevant educational images to illustrate concepts or provide visual examples",
+          parameters: z.object(
+            {
+              query: z
+                .string()
+                .describe(
+                  "Specific search query describing the educational image needed. Be precise about the scientific or mathematical concept you want to illustrate."
+                ),
+            },
+            {
+              required_error: "Query is required",
+              invalid_type_error: "Query must be a string",
+            }
+          ),
+          execute: async ({ query }) => {
+            const myHeaders = new Headers();
+            myHeaders.append(
+              "X-API-KEY",
+              process.env.SERP_API_KEY || "serper.dev API key"
+            );
+            myHeaders.append("Content-Type", "application/json");
+
+            const raw = JSON.stringify({
+              q: query,
+              gl: "in",
             });
 
-            // Install Plotly and supporting libraries
-            await sandbox.runCode(`
-        import sys
-        !{sys.executable} -m pip install plotly numpy sympy pandas kaleido
-            `);
+            try {
+              const response = await fetch("https://google.serper.dev/images", {
+                method: "POST",
+                headers: myHeaders,
+                body: raw,
+                redirect: "follow",
+              });
+              const result = await response.json();
 
-            // Add template code to ensure proper static image rendering with Plotly
-            const enhancedCode = `
-        import plotly.graph_objects as go
-        import plotly.express as px
-        import plotly.io as pio
-        import numpy as np
-        import base64
-        from IPython.display import Image, display
-        import io
-        
-        # Set renderer to generate high-quality static images
-        pio.renderers.default = "png"
-        
-        # Execute the visualization code
-        ${code}
-        
-        # If the code doesn't explicitly save the figure, try to capture the last created figure
-        try:
-            # Check if 'fig' exists in the local namespace
-            if 'fig' in locals():
-                img_bytes = pio.to_image(fig, format="png", width=800, height=600, scale=2)
-                # Convert bytes to base64 string for easier handling in JavaScript
-                base64_img = base64.b64encode(img_bytes).decode('utf-8')
-                print(f"BASE64_IMAGE_START:{base64_img}:BASE64_IMAGE_END")
-        except Exception as e:
-            print(f"Error generating visualization: {e}")
-            `;
+              if (!result || !result.images || result.images.length === 0) {
+                return {
+                  type: "text",
+                  text: "No relevant images found. Let me explain the concept differently.",
+                };
+              }
 
-            // Run the enhanced visualization code
-            const { text } = await sandbox.runCode(enhancedCode);
+              // Return the top 3 images (or fewer if less are available)
+              interface Image {
+                imageUrl: string;
+                title: string;
+                imageWidth: number;
+                imageHeight: number;
+                thumbnailUrl: string;
+                thumbnailWidth: number;
+                thumbnailHeight: number;
+                source: string;
+                domain: string;
+                googleUrl: string;
+                position: number;
+                link: string;
+              }
 
-            // Extract the base64 image data from the output
-            const base64Match = text?.match(
-              /BASE64_IMAGE_START:([^]*?):BASE64_IMAGE_END/
-            );
+              const imagesToReturn: Image[] = result.images.slice(0, 5);
 
-            if (base64Match && base64Match[1]) {
-              // Return a properly structured object with the base64 image data
-              return [{ png: base64Match[1] }];
-            } else {
-              // Return an error message if no image was generated
-              return [
-                { error: "Failed to generate visualization", details: text },
-              ];
+              return {
+                type: "image",
+                images: imagesToReturn.map((i) => {
+                  return {
+                    imageUrl: i.imageUrl,
+                    title: i.title,
+                  };
+                }),
+              };
+            } catch (error) {
+              console.error(error);
+              return {
+                type: "text",
+                text: "I couldn't retrieve images at the moment. Let me explain the concept differently.",
+              };
             }
           },
         },
@@ -120,6 +205,7 @@ export async function POST(req: Request) {
       sendSources: true,
     });
   } catch (error) {
-    return NextResponse.json(error, { status: 500 });
+    console.error("API route error:", error);
+    return NextResponse.json({ error: "Error" }, { status: 500 });
   }
 }
