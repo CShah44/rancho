@@ -1,13 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import {
-  Brain,
-  Quote as BookQuote,
-  Video,
-  MessageCircle,
-  Globe,
-} from "lucide-react";
+import { Brain, MessageCircle, Globe } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,32 +11,23 @@ import { cn } from "@/lib/utils";
 
 const Chat = () => {
   const [mode, setMode] = useState("chat");
+  const [timeGreeting, setTimeGreeting] = useState("Good day");
 
   const modes = {
     chat: {
       icon: MessageCircle,
-      label: "Chat",
+      label: "Rancho",
       color: "text-yellow-500",
     },
     search: {
       icon: Globe,
-      label: "Search",
+      label: "Rancho on Web",
       color: "text-blue-500",
     },
     reasoning: {
       icon: Brain,
-      label: "Reasoning",
+      label: "Rancho Thinks",
       color: "text-green-500",
-    },
-    quiz: {
-      icon: BookQuote,
-      label: "Quiz",
-      color: "text-purple-500",
-    },
-    video: {
-      icon: Video,
-      label: "Video",
-      color: "text-red-500",
     },
   };
 
@@ -66,15 +51,46 @@ const Chat = () => {
     }
   }, [messages]);
 
+  // Set greeting based on time of day
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      let greeting = "Good day";
+
+      if (hour >= 5 && hour < 12) {
+        greeting = "Morning, ";
+      } else if (hour >= 12 && hour < 17) {
+        greeting = "Good afternoon, ";
+      } else if (hour >= 17 && hour < 22) {
+        greeting = "Evening, ";
+      } else {
+        greeting = "Nighty Night, ";
+      }
+
+      setTimeGreeting(greeting);
+    };
+
+    // Set initial greeting
+    updateGreeting();
+
+    // Update greeting if the component stays mounted across time boundaries
+    const intervalId = setInterval(updateGreeting, 600000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   return (
     <>
       {messages.length <= 0 ? (
         <div className="text-center space-y-6 flex-grow flex flex-col justify-center">
-          <h1 className="text-5xl font-bold text-white font-grotesk tracking-tight">
-            Good evening.
+          <h1 className="text-6xl font-bold text-white font-grotesk tracking-tight">
+            {timeGreeting} Chaitya!
           </h1>
-          <p className="text-2xl text-zinc-400">
+          <p className="text-4xl text-zinc-400">
             I&apos;m Rancho and I&apos;m here to change how you learn.
+          </p>
+          <p className="text-zinc-500 italic text-sm">
+            Rancho can make mistakes.
           </p>
         </div>
       ) : (
@@ -112,7 +128,7 @@ const Chat = () => {
         <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 shadow-xl border border-zinc-700/30">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
-              placeholder="What do you want to know?"
+              placeholder="What do you want to learn?"
               value={input}
               onChange={handleInputChange}
               className="bg-zinc-700/50 border-zinc-600 text-white placeholder:text-zinc-400 focus-visible:ring-zinc-500 rounded-xl"

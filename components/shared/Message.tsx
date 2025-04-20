@@ -4,6 +4,7 @@ import { AlertCircle, Brain, ExternalLink, LinkIcon } from "lucide-react";
 import { Message as MessageType } from "ai";
 import ImagesTool from "./ImagesTool";
 import VideoTool from "./VideoTool";
+import QuizComponent from "./QuizComponent";
 
 interface MessageProps {
   message: MessageType;
@@ -13,7 +14,7 @@ const Message = ({ message }: MessageProps) => {
   return (
     <div
       className={cn(
-        "flex",
+        "flex text-lg",
         message.role === "user" ? "justify-end" : "justify-start"
       )}
     >
@@ -43,6 +44,20 @@ const Message = ({ message }: MessageProps) => {
                     <ImagesTool
                       key={`${message.id}-${i}-image`}
                       images={part.toolInvocation.result.images}
+                    />
+                  );
+                }
+
+                if (
+                  part.toolInvocation.toolName === "quiz" &&
+                  part.toolInvocation.state === "result"
+                ) {
+                  return (
+                    <QuizComponent
+                      key={`${message.id}-${i}-quiz`}
+                      topic={part.toolInvocation.result.topic}
+                      difficulty={part.toolInvocation.result.difficulty}
+                      questions={part.toolInvocation.result.questions}
                     />
                   );
                 }
@@ -93,7 +108,7 @@ const Message = ({ message }: MessageProps) => {
                 return (
                   <>
                     <div
-                      key={`${message.id}-${i}-source`}
+                      key={`${message.id}-${i}-source-${part.source.url}-${part.source.title}`}
                       className="mt-3 border-t border-zinc-700/50 pt-3"
                     >
                       <a

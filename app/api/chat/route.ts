@@ -33,14 +33,16 @@ export async function POST(req: Request) {
         - Include analogies and metaphors that make concepts relatable
         - Suggest visualization opportunities when explaining complex topics
         
-        You have access to two visualization tools:
+        You have access to three tools:
         1. Video animations - These are high-quality educational animations that illustrate concepts dynamically
         2. Images - These are static visuals that can help explain concepts or provide examples
+        3. Quiz - Generate interactive quizzes to test understanding of concepts
         
         Prioritize using video animations when explaining complex concepts that benefit from dynamic visualization.
         Use images when a static visual would suffice or when specifically requested by the student.
+        Suggest quizzes when you want to test the student's understanding of a concept you've just explained.
         
-        When appropriate, recommend creating a visualization to illustrate concepts. The video tool is generally more effective for explaining scientific and mathematical concepts as it can show processes and transformations over time.
+        When creating quizzes, make sure they are educational, challenging but fair, and provide helpful explanations for the correct answers.
       `,
       messages,
       tools: {
@@ -193,6 +195,63 @@ export async function POST(req: Request) {
               return {
                 type: "text",
                 text: "I couldn't retrieve images at the moment. Let me explain the concept differently.",
+              };
+            }
+          },
+        },
+        quiz: {
+          description:
+            "Generate an interactive quiz to test understanding of scientific or mathematical concepts",
+          parameters: z.object(
+            {
+              topic: z
+                .string()
+                .describe(
+                  "The specific topic or concept the quiz should cover"
+                ),
+              difficulty: z
+                .enum(["easy", "medium", "hard"])
+                .describe("The difficulty level of the quiz"),
+              questions: z
+                .array(
+                  z.object({
+                    question: z.string().describe("The question text"),
+                    options: z
+                      .array(z.string())
+                      .describe("Array of 4 answer options"),
+                    correctAnswer: z
+                      .number()
+                      .min(0)
+                      .max(3)
+                      .describe("Index of the correct answer (0-3)"),
+                    explanation: z
+                      .string()
+                      .describe("Explanation of why the answer is correct"),
+                  })
+                )
+                .length(5)
+                .describe(
+                  "Array of 5 quiz questions with their options, correct answers, and explanations"
+                ),
+            },
+            {
+              required_error: "Topic, difficulty, and questions are required",
+              invalid_type_error: "Invalid parameter types",
+            }
+          ),
+          execute: async ({ topic, difficulty, questions }) => {
+            try {
+              return {
+                type: "quiz",
+                topic: topic,
+                difficulty: difficulty,
+                questions: questions,
+              };
+            } catch (error) {
+              console.error("Quiz generation error:", error);
+              return {
+                type: "text",
+                text: `I couldn't generate a quiz at the moment. Let's continue with our discussion about ${topic}.`,
               };
             }
           },
