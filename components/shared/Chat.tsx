@@ -58,9 +58,6 @@ const Chat = () => {
       onError: (error) => {
         console.error(error.message);
       },
-      onToolCall: (toolCall) => {
-        console.log(toolCall.toolCall.toolName);
-      },
     });
 
   useEffect(() => {

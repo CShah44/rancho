@@ -43,46 +43,19 @@ async def explain_concept(request: ConceptRequest):
         
         # Use Gemini to generate Manim code
         prompt = f"""
-            Generate exceptional, flawless Manim code to create a visually stunning animation explaining this concept: {request.description}
+            Generate Manim code to create an animation explaining this concept: {request.description}
             
-            CRITICAL REQUIREMENTS:
-            1. The code MUST be complete, runnable, and bug-free
-            2. The animation MUST be intuitive, creative, and educational
+            Requirements:
+            1. The code must be complete and runnable
+            2. Use appropriate Manim constructs (MathTex, Text, etc.)
+            3. Keep animations clear and educational
+            4. Ensure all elements stay within the frame
+            5. Use appropriate colors and text sizes
             
-            VISUAL DESIGN GUIDELINES:
-            1. Frame awareness: Ensure all elements stay within the frame boundaries
-            - Use appropriate scaling for objects
-            - Position elements with sufficient margins from frame edges
-            - Test coordinates to prevent objects from being cut off
+            The animation should be 30-60 seconds in length.
             
-            2. Prevent overlapping elements:
-            - Maintain proper spacing between text and objects
-            - Use strategic positioning and timing for elements
-            - Implement clear visual hierarchy
-            
-            3. Visual clarity and aesthetics:
-            - Use a consistent, visually pleasing color palette (avoid default colors)
-            - Implement proper text sizing and font choices for readability
-            - Add subtle background elements or grids when appropriate
-            - Use smooth transitions and animations with appropriate run_time values
-            
-            4. Educational effectiveness:
-            - Break complex concepts into sequential, logical steps
-            - Use clear labels, annotations, and callouts
-            - Implement highlighting techniques to draw attention to key points
-            - Include visual metaphors and analogies when possible
-            
-            5. Technical excellence:
-            - Use appropriate Manim constructs (MathTex, Text, etc.)
-            - Implement proper waiting times between animations for comprehension
-            - Group related elements using VGroup when appropriate
-            - Use camera movements thoughtfully (zooming, panning)
-            
-            IMPORTANT: The animation should be 30-60 seconds in length, focused on clarity and impact.
-            
-            Give a detailed explanation of the visualization and how it relates to the concept.
             Return only the Python code without any explanations or markdown.
-            The user should not know about manim do not mention it. Just talk about the concepts and address as visualization.
+            Also provide a brief explanation of the visualization. Address the animation as visualization in explanation.
         """
     
         response = client.models.generate_content(

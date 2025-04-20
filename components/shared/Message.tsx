@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 import { MemoizedMarkdown } from "@/components/shared/memoized-markdown";
-import { Brain, ExternalLink, LinkIcon } from "lucide-react";
+import { AlertCircle, Brain, ExternalLink, LinkIcon } from "lucide-react";
 import { Message as MessageType } from "ai";
 import ImagesTool from "./ImagesTool";
+import VideoTool from "./VideoTool";
 
 interface MessageProps {
   message: MessageType;
@@ -34,8 +35,6 @@ const Message = ({ message }: MessageProps) => {
                   </div>
                 );
               case "tool-invocation":
-                console.log(part.toolInvocation);
-
                 if (
                   part.toolInvocation.toolName === "image" &&
                   part.toolInvocation.state === "result"
@@ -48,7 +47,36 @@ const Message = ({ message }: MessageProps) => {
                   );
                 }
 
-                return;
+                if (
+                  part.toolInvocation.toolName === "video" &&
+                  part.toolInvocation.state === "result"
+                ) {
+                  if (part.toolInvocation.result.status === "success")
+                    return (
+                      <VideoTool
+                        key={`${message.id}-${i}-video`}
+                        video={part.toolInvocation.result}
+                      />
+                    );
+                  else if (part.toolInvocation.result.status === "error")
+                    return (
+                      <div
+                        key={`${message.id}-${i}-video-e`}
+                        className="mt-4 flex flex-col items-center justify-center p-4 bg-red-500/10 rounded-lg border border-red-500/20 space-y-3"
+                      >
+                        <AlertCircle className="text-red-500 h-6 w-6" />
+                        <p className="text-sm font-medium text-red-500">
+                          Failed to generate video
+                        </p>
+                        <p className="text-sm text-zinc-400 text-center">
+                          There was an error during video generation. Please try
+                          again.
+                        </p>
+                      </div>
+                    );
+                }
+
+                break;
               case "reasoning":
                 return (
                   <div

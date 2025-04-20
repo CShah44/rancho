@@ -57,7 +57,7 @@ export async function POST(req: Request) {
               description: z
                 .string()
                 .describe(
-                  "Detailed description of the concept to be taught and visualized. This should include the specific scientific or mathematical concept, key principles, and any important aspects that should be highlighted in the visualization. Be comprehensive as this will be used to generate the educational animation."
+                  "A short description of the concept to be taught and visualized. This should include the specific scientific or mathematical concept, key principles, and any important aspects that should be highlighted in the visualization. Be concise as this will be used to generate the educational animation."
                 ),
             },
             {
@@ -66,8 +66,6 @@ export async function POST(req: Request) {
             }
           ),
           execute: async ({ title, description }) => {
-            console.log(description);
-
             try {
               // Call the FastAPI backend to generate the video
               const response = await fetch(
@@ -77,15 +75,15 @@ export async function POST(req: Request) {
                   headers: {
                     "Content-Type": "application/json",
                   },
-                  body: JSON.stringify({ description }),
+                  body: JSON.stringify({ description: description }),
                 }
               );
 
               if (!response.ok) {
                 const errorText = await response.text();
-                console.error("Error from FastAPI backend:", errorText);
                 return {
                   type: "text",
+                  status: "error",
                   text: `Error generating animation: ${errorText}`,
                 };
               }
@@ -97,19 +95,20 @@ export async function POST(req: Request) {
               if (!videoUrl) {
                 return {
                   type: "text",
+                  status: "error",
                   text: "Animation generated but video URL not found. Please try again.",
                 };
               }
 
               return {
                 type: "video",
+                status: "success",
                 title: title,
                 videoUrl: videoUrl,
                 explanation: explanation,
                 mimeType: "video/mp4",
               };
             } catch (error) {
-              console.error("Error in video generation:", error);
               return {
                 type: "text",
                 text: `Failed to generate animation: ${error}`,
