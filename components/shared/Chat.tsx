@@ -137,61 +137,59 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
         </div>
       )}
 
-      <div className="relative">
-        <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 shadow-xl border border-zinc-700/30">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Input
-              placeholder="What do you want to learn?"
-              value={input}
-              onChange={handleInputChange}
-              className="bg-zinc-700/50 border-zinc-600 text-white placeholder:text-zinc-400 focus-visible:ring-zinc-500 rounded-xl"
-              disabled={status === "streaming"}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hover:bg-zinc-700/50 rounded-xl"
-              type="button"
-            >
-              <Paperclip className="text-zinc-400" size={20} />
-            </Button>
-            <Button
-              type="submit"
-              className="bg-white hover:bg-white/90 text-black rounded-xl transition-all duration-200 hover:shadow-lg disabled:opacity-50"
-              disabled={status === "streaming" || !input.trim()}
-            >
-              {status === "streaming" ? (
-                <Loader2 size={20} />
-              ) : (
-                <SendHorizontal size={20} />
-              )}
-            </Button>
-          </form>
-          <div className="flex items-center gap-2 mt-3 overflow-x-auto">
-            <div className="flex h-[40px] bg-zinc-700/50 rounded-full p-1">
-              {Object.entries(modes).map(([key, value]) => {
-                const isActive = mode === key;
-                const Icon = value.icon;
+      <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 m-4 shadow-xl border border-zinc-700/30">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input
+            placeholder="What do you want to learn?"
+            value={input}
+            onChange={handleInputChange}
+            className="bg-zinc-700/50 border-zinc-600 text-white placeholder:text-zinc-400 focus-visible:ring-zinc-500 rounded-xl"
+            disabled={status === "streaming"}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-zinc-700/50 rounded-xl"
+            type="button"
+          >
+            <Paperclip className="text-zinc-400" size={20} />
+          </Button>
+          <Button
+            type="submit"
+            className="bg-white hover:bg-white/90 text-black rounded-xl transition-all duration-200 hover:shadow-lg disabled:opacity-50"
+            disabled={status === "streaming" || !input.trim()}
+          >
+            {status === "streaming" ? (
+              <Loader2 size={20} />
+            ) : (
+              <SendHorizontal size={20} />
+            )}
+          </Button>
+        </form>
+        <div className="flex items-center gap-2 mt-3 overflow-x-auto">
+          <div className="flex h-[40px] bg-zinc-700/50 rounded-full p-1">
+            {Object.entries(modes).map(([key, value]) => {
+              const isActive = mode === key;
+              const Icon = value.icon;
 
-                return (
-                  <Button
-                    key={key}
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "flex items-center gap-2 rounded-full transition-all",
-                      isActive
-                        ? "bg-zinc-600 text-white"
-                        : "hover:bg-zinc-600/50 text-zinc-400"
-                    )}
-                    onClick={() => setMode(key)}
-                  >
-                    <Icon className={isActive ? value.color : ""} size={18} />
-                    <span>{value.label}</span>
-                  </Button>
-                );
-              })}
-            </div>
+              return (
+                <Button
+                  key={key}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "flex items-center gap-2 rounded-full transition-all",
+                    isActive
+                      ? "bg-zinc-600 text-white"
+                      : "hover:bg-zinc-600/50 text-zinc-400"
+                  )}
+                  onClick={() => setMode(key)}
+                >
+                  <Icon className={isActive ? value.color : ""} size={18} />
+                  <span>{value.label}</span>
+                </Button>
+              );
+            })}
           </div>
         </div>
       </div>

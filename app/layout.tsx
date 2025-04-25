@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/shared/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SessionProvider } from "next-auth/react";
+import { auth } from "@/auth";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -12,7 +13,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const dmSans = DM_Sans({
+export const dmSans = DM_Sans({
   variable: "--font-secondary",
 });
 
@@ -25,11 +26,13 @@ export const metadata: Metadata = {
   description: "Your AI assistant for anything you need",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html lang="en">
       <body
@@ -38,7 +41,7 @@ export default function RootLayout({
         <main>
           <SessionProvider>
             <SidebarProvider defaultOpen={true}>
-              <AppSidebar />
+              {session && <AppSidebar />}
               <SidebarInset>{children}</SidebarInset>
             </SidebarProvider>
           </SessionProvider>
