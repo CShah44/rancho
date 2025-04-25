@@ -11,6 +11,7 @@ interface MessageProps {
 }
 
 const Message = ({ message }: MessageProps) => {
+  console.log(message.id); // TODO REMOVE
   return (
     <div
       className={cn(

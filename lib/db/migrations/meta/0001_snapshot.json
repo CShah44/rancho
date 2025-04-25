@@ -1,6 +1,6 @@
 {
-  "id": "b0c80bd1-5715-4cb7-87c7-55bc6977074c",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "da7d36c6-4b14-45ba-841f-e35e101c8302",
+  "prevId": "b0c80bd1-5715-4cb7-87c7-55bc6977074c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -245,10 +245,9 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "chatId": {
           "name": "chatId",

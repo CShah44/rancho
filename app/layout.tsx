@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
+import { AppSidebar } from "@/components/shared/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -31,7 +35,15 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.className} ${dmSans.variable} ${inter.variable} font-sans antialiased`}
       >
-        {children}
+        <main>
+          <SessionProvider>
+            <SidebarProvider defaultOpen={true}>
+              <AppSidebar />
+              <SidebarInset>{children}</SidebarInset>
+            </SidebarProvider>
+          </SessionProvider>
+        </main>
+        <Toaster />
       </body>
     </html>
   );

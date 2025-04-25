@@ -1,14 +1,48 @@
 import { google } from "@ai-sdk/google";
-import { streamText } from "ai";
+import { appendResponseMessages, streamText, generateId } from "ai";
 import z from "zod";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import {
+  deleteChatById,
+  getChatById,
+  saveChat,
+  saveMessages,
+} from "@/lib/db/queries";
+import { generateTitleFromUserMessage } from "./actions";
+import { getMostRecentUserMessage, getTrailingMessageId } from "@/lib/utils";
 
 // Allow streaming responses up to 60 seconds for video generation
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    const { messages, search } = await req.json();
+    const { messages, search, id } = await req.json();
+
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userMessage = getMostRecentUserMessage(messages);
+
+    if (!userMessage) {
+      return new Response("No user message found", { status: 400 });
+    }
+
+    const chat = await getChatById({ id });
+
+    if (!chat) {
+      const title = await generateTitleFromUserMessage({
+        message: userMessage,
+      });
+
+      await saveChat({ id, userId: session.user.id, title });
+    } else {
+      if (chat.userId !== session.user.id) {
+        return new Response("Forbidden", { status: 403 });
+      }
+    }
 
     const result = streamText({
       model: google("gemini-2.0-flash-001", {
@@ -257,6 +291,47 @@ export async function POST(req: Request) {
           },
         },
       },
+      onFinish: async (output) => {
+        try {
+          const assistantId = getTrailingMessageId({
+            messages: output.response.messages.filter(
+              (message) => message.role === "assistant"
+            ),
+          });
+
+          if (!assistantId) {
+            throw new Error("No assistant message found!");
+          }
+
+          const [, assistantMessage] = appendResponseMessages({
+            messages: [userMessage],
+            responseMessages: output.response.messages,
+          });
+
+          await saveMessages({
+            messages: [
+              {
+                chatId: id,
+                id: generateId(),
+                role: "user",
+                parts: userMessage.parts,
+                attachments: userMessage.experimental_attachments ?? [],
+                createdAt: new Date(),
+              },
+              {
+                id: assistantId,
+                chatId: id,
+                role: assistantMessage.role,
+                parts: assistantMessage.parts,
+                attachments: assistantMessage.experimental_attachments ?? [],
+                createdAt: new Date(),
+              },
+            ],
+          });
+        } catch (error) {
+          console.error("Error saving messages:", error);
+        }
+      },
     });
 
     return result.toDataStreamResponse({
@@ -265,5 +340,37 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("API route error:", error);
     return NextResponse.json({ error: "Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return new Response("Not Found", { status: 404 });
+  }
+
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  try {
+    const chat = await getChatById({ id });
+
+    if (chat.userId !== session.user.id) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    const deletedChat = await deleteChatById({ id });
+
+    return Response.json(deletedChat, { status: 200 });
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    return new Response("An error occurred while processing your request!", {
+      status: 500,
+    });
   }
 }

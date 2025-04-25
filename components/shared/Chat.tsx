@@ -8,8 +8,17 @@ import { Input } from "@/components/ui/input";
 import Message from "./Message";
 import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Message as M } from "@ai-sdk/react";
+import { toast } from "sonner";
+import type { User } from "next-auth";
 
-const Chat = () => {
+interface ChatProps {
+  user: User;
+  chatId?: string;
+  initialMessages?: M[];
+}
+
+const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
   const [mode, setMode] = useState("chat");
   const [timeGreeting, setTimeGreeting] = useState("Good day");
 
@@ -35,13 +44,15 @@ const Chat = () => {
 
   const { messages, input, handleInputChange, handleSubmit, status, error } =
     useChat({
-      id: "chat",
+      id: chatId,
       api: "/api/chat",
+      initialMessages,
       body: {
+        id: chatId,
         search: mode === "search",
       },
-      onError: (error) => {
-        console.error(error.message);
+      onError: () => {
+        toast.error("Something went wrong. Please try again.");
       },
     });
 
@@ -84,7 +95,7 @@ const Chat = () => {
       {messages.length <= 0 ? (
         <div className="text-center space-y-6 flex-grow flex flex-col justify-center">
           <h1 className="text-6xl font-bold text-white font-grotesk tracking-tight">
-            {timeGreeting} Chaitya!
+            {timeGreeting} {user.name}!
           </h1>
           <p className="text-4xl text-zinc-400">
             I&apos;m Rancho and I&apos;m here to change how you learn.

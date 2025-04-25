@@ -1,20 +1,16 @@
 import {
-  boolean,
-  timestamp,
   pgTable,
+  varchar,
+  timestamp,
+  json,
+  uuid,
   text,
   primaryKey,
+  boolean,
   integer,
 } from "drizzle-orm/pg-core";
-// import { neon } from "@neondatabase/serverless";
-// import { drizzle } from "drizzle-orm/neon-http";
 import type { AdapterAccountType } from "next-auth/adapters";
-
-// // Create a SQL client with Neon
-// const sql = neon(process.env.DATABASE_URL!);
-
-// // Create a Drizzle client using the Neon client
-// export const db = drizzle(sql);
+import type { InferSelectModel } from "drizzle-orm";
 
 export const users = pgTable("user", {
   id: text("id")
@@ -24,7 +20,10 @@ export const users = pgTable("user", {
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
+  credits: integer("credits").notNull().default(50),
 });
+
+export type User = InferSelectModel<typeof users>;
 
 export const accounts = pgTable(
   "account",
@@ -98,3 +97,30 @@ export const authenticators = pgTable(
     },
   ]
 );
+
+export const chat = pgTable("Chat", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  createdAt: timestamp("createdAt").notNull(),
+  title: text("title").notNull(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id),
+  visibility: varchar("visibility", { enum: ["public", "private"] })
+    .notNull()
+    .default("private"),
+});
+
+export type Chat = InferSelectModel<typeof chat>;
+
+export const message = pgTable("Message", {
+  id: text("id").primaryKey().notNull(),
+  chatId: uuid("chatId")
+    .notNull()
+    .references(() => chat.id),
+  role: varchar("role").notNull(),
+  parts: json("parts").notNull(),
+  attachments: json("attachments").notNull(),
+  createdAt: timestamp("createdAt").notNull(),
+});
+
+export type DBMessage = InferSelectModel<typeof message>;
