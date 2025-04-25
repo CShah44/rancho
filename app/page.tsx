@@ -12,7 +12,7 @@ export default async function Home() {
     <main className="min-h-screen bg-zinc-900 flex flex-col items-center px-4">
       {!session && <SignIn />}
       {session && (
-        <div className="w-full max-w-4xl flex flex-col h-screen pt-8 pb-4">
+        <div className="w-full flex flex-col h-screen pt-2">
           <Chat chatId={id} user={session.user!} initialMessages={[]} />
         </div>
       )}

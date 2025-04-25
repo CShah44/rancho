@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.className} ${dmSans.variable} ${inter.variable} font-sans antialiased`}
+        className={`${spaceGrotesk.className} ${dmSans.variable} ${inter.variable} font-sans antialiased pointer-events-auto`}
       >
         <main>
           <SessionProvider>

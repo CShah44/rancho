@@ -107,37 +107,35 @@ const Message = ({ message }: MessageProps) => {
                 );
               case "source":
                 return (
-                  <>
-                    <div
-                      key={`${message.id}-${i}-source-${part.source.url}-${part.source.title}`}
-                      className="mt-3 border-t border-zinc-700/50 pt-3"
+                  <div
+                    key={`${message.id}-${i}-source-${part.source.url}-${part.source.title}`}
+                    className="mt-3 border-t border-zinc-700/50 pt-3"
+                  >
+                    <a
+                      href={part.source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-start gap-3 p-2 rounded-lg bg-zinc-700/30 hover:bg-zinc-700/50 transition-colors group"
                     >
-                      <a
-                        href={part.source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-start gap-3 p-2 rounded-lg bg-zinc-700/30 hover:bg-zinc-700/50 transition-colors group"
-                      >
-                        <div className="mt-0.5 flex-shrink-0">
-                          <LinkIcon size={16} className="text-blue-400" />
+                      <div className="mt-0.5 flex-shrink-0">
+                        <LinkIcon size={16} className="text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-blue-400 group-hover:text-blue-300 transition-colors line-clamp-2">
+                          {part.source.title}
                         </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-blue-400 group-hover:text-blue-300 transition-colors line-clamp-2">
-                            {part.source.title}
-                          </div>
-                          <div className="text-xs text-zinc-400 mt-1 flex items-center">
-                            <span className="truncate max-w-[200px]">
-                              {part.source.url.replace(/^https?:\/\//, "")}
-                            </span>
-                            <ExternalLink
-                              size={12}
-                              className="ml-1 inline-block opacity-70"
-                            />
-                          </div>
+                        <div className="text-xs text-zinc-400 mt-1 flex items-center">
+                          <span className="truncate max-w-[200px]">
+                            {part.source.url.replace(/^https?:\/\//, "")}
+                          </span>
+                          <ExternalLink
+                            size={12}
+                            className="ml-1 inline-block opacity-70"
+                          />
                         </div>
-                      </a>
-                    </div>
-                  </>
+                      </div>
+                    </a>
+                  </div>
                 );
 
               default:

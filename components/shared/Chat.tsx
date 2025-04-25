@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Message as M } from "@ai-sdk/react";
 import { toast } from "sonner";
 import type { User } from "next-auth";
+import PureChatHeader from "./chat-header";
 
 interface ChatProps {
   user: User;
@@ -91,7 +92,8 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
   }, []);
 
   return (
-    <>
+    <div className="flex flex-col min-w-0 h-dvh">
+      <PureChatHeader />
       {messages.length <= 0 ? (
         <div className="text-center space-y-6 flex-grow flex flex-col justify-center">
           <h1 className="text-6xl font-bold text-white font-grotesk tracking-tight">
@@ -106,7 +108,7 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
         </div>
       ) : (
         <div
-          className="flex-grow overflow-y-auto mb-4 px-2"
+          className="flex-grow overflow-y-auto pb-4 px-2"
           style={{ scrollbarWidth: "none" }}
         >
           <div className="space-y-6 py-4">
@@ -193,7 +195,7 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

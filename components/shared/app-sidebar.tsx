@@ -22,14 +22,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
-import { SidebarToggle } from "./sidebar-toggle";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const { data: session } = useSession();
   const user = session?.user as User;
   const router = useRouter();
-  const { setOpenMobile, open } = useSidebar();
+  const { setOpenMobile } = useSidebar();
 
   return (
     <div className="flex relative">
@@ -85,14 +84,6 @@ export function AppSidebar() {
           {user && <SidebarUserNav user={user} />}
         </SidebarFooter>
       </Sidebar>
-
-      {/* Position the toggle button relative to the sidebar */}
-      <SidebarToggle
-        className={cn(
-          "absolute top-4 z-20 bg-zinc-950 rounded-md",
-          open ? "left-[calc(100%+7px)]" : "left-4 md:left-6"
-        )}
-      />
     </div>
   );
 }
