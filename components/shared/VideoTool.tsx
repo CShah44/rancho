@@ -8,6 +8,7 @@ import {
   Minimize,
   SkipBack,
   SkipForward,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -149,6 +150,20 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
     }
   };
 
+  const handleDownload = () => {
+    if (video.videoUrl) {
+      // Create an anchor element
+      const a = document.createElement("a");
+      a.href = video.videoUrl;
+      // Set the download attribute with the video title or a default name
+      a.download = video.title || "video";
+      // Append to the body, click it, and remove it
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   return (
     <div className="my-4 rounded-lg overflow-hidden bg-zinc-900 shadow-lg">
       <div
@@ -156,7 +171,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
         className={cn("relative group", isFullscreen ? "bg-black" : "")}
         onMouseMove={handleMouseMove}
       >
-        {/* Video */}
+        {/* Video element remains the same */}
         <video
           ref={videoRef}
           src={video.videoUrl}
@@ -170,7 +185,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
           playsInline
         />
 
-        {/* Video Title Overlay */}
+        {/* Video Title Overlay remains the same */}
         <div
           className={cn(
             "absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent text-white transition-opacity duration-300",
@@ -187,18 +202,13 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
             showControls ? "opacity-100" : "opacity-0"
           )}
         >
-          {/* Progress bar */}
+          {/* Progress bar remains the same */}
           <div className="flex items-center mb-2 relative h-2">
-            {/* Background track */}
             <div className="absolute inset-0 bg-zinc-600 rounded-full h-1 top-[50%] -translate-y-[50%]"></div>
-
-            {/* Watched portion */}
             <div
               className="absolute left-0 bg-blue-500 rounded-full h-1 top-[50%] -translate-y-[50%]"
               style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
             ></div>
-
-            {/* Seek input */}
             <input
               type="range"
               min="0"
@@ -212,7 +222,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
           {/* Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              {/* Play/Pause */}
+              {/* Play/Pause button remains the same */}
               <button
                 onClick={togglePlay}
                 className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
@@ -225,7 +235,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
                 )}
               </button>
 
-              {/* Skip backward */}
+              {/* Skip backward remains the same */}
               <button
                 onClick={skipBackward}
                 className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
@@ -234,7 +244,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
                 <SkipBack size={18} className="text-white" />
               </button>
 
-              {/* Skip forward */}
+              {/* Skip forward remains the same */}
               <button
                 onClick={skipForward}
                 className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
@@ -243,7 +253,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
                 <SkipForward size={18} className="text-white" />
               </button>
 
-              {/* Volume */}
+              {/* Volume button remains the same */}
               <button
                 onClick={toggleMute}
                 className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
@@ -256,14 +266,23 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
                 )}
               </button>
 
-              {/* Time */}
+              {/* Time display remains the same */}
               <div className="text-xs text-white">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* Fullscreen */}
+              {/* Download button - NEW */}
+              <button
+                onClick={handleDownload}
+                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                aria-label="Download video"
+              >
+                <Download size={18} className="text-white" />
+              </button>
+
+              {/* Fullscreen button remains the same */}
               <button
                 onClick={toggleFullscreen}
                 className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
@@ -281,7 +300,7 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
           </div>
         </div>
 
-        {/* Play button overlay (when paused) */}
+        {/* Play button overlay remains the same */}
         {!isPlaying && (
           <div className="absolute inset-0 flex items-center justify-center">
             <button
