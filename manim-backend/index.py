@@ -1,5 +1,5 @@
 from typing import Union
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from google import genai
 from google.genai import types
 import os
@@ -13,6 +13,7 @@ import json
 import dotenv
 import glob
 import time
+import re
 
 dotenv.load_dotenv()
 
@@ -177,3 +178,28 @@ async def explain_concept(request: ConceptRequest):
     
     # If we've exhausted all attempts, raise an exception
     raise HTTPException(status_code=500, detail=f"Failed after {max_attempts} attempts. Last error: {last_error}")
+
+@app.delete("/delete-video")
+async def delete_video(video_url: str = Body(...)):
+    try:
+        # Extract the public_id from the Cloudinary URL
+        # Cloudinary URLs typically look like: https://res.cloudinary.com/cloud_name/video/upload/v1234567890/folder/public_id.mp4
+        match = re.search(r'upload/v\d+/(.+)\.\w+$', video_url)
+        if not match:
+            raise HTTPException(status_code=400, detail="Invalid Cloudinary URL format")
+        
+        public_id = match.group(1)
+        
+        # The public_id now includes the folder, e.g., "concept_explanations/bruwtqelu1kciogqze6z"
+        # No need to add the folder prefix manually
+        
+        # Delete the video from Cloudinary
+        result = cloudinary.uploader.destroy(public_id, resource_type="video")
+        
+        if result.get('result') != 'ok':
+            raise HTTPException(status_code=500, detail=f"Failed to delete video: {result.get('result')}")
+        
+        return {"status": "success", "message": "Video deleted successfully"}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting video: {str(e)}")

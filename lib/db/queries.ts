@@ -36,6 +36,71 @@ export async function saveChat({
 
 export async function deleteChatById({ id }: { id: string }) {
   try {
+    // First, get all messages for this chat to find any video URLs
+    const messages = await getMessagesByChatId({ id });
+
+    // Look for tool invocations with videos in the messages
+    for (const msg of messages) {
+      if (msg.parts) {
+        try {
+          // parts is an array of objects, so we need to iterate through it
+          const parts = msg.parts as Array<{
+            type: string;
+            text?: string;
+            toolInvocation?: {
+              toolName: string;
+              state: string;
+              toolCallId: string;
+              args?: {
+                title?: string;
+                description?: string;
+                query?: string;
+              };
+              step: number;
+              result?: {
+                videoUrl?: string;
+                type?: string;
+                mimeType?: string;
+                title?: string;
+                explanation?: string;
+                status?: string;
+                images?: Array<{
+                  title: string;
+                  imageUrl: string;
+                }>;
+              };
+            };
+          }>;
+
+          for (const part of parts) {
+            if (part.toolInvocation?.result?.videoUrl) {
+              // Delete the video from the server, send request to your server to delete the video
+              console.log(part.toolInvocation.result.videoUrl); // Log the video URL for debugging
+              const response = await fetch(
+                "http://localhost:8000/delete-video",
+                {
+                  method: "DELETE",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    video_url: part.toolInvocation.result.videoUrl,
+                  }),
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error("Failed to delete video from chat");
+              }
+            }
+          }
+        } catch (parseError) {
+          // If content isn't valid JSON or doesn't have the expected structure, just continue
+          console.error("Error parsing message content:", parseError);
+        }
+      }
+    }
+
     await db.delete(message).where(eq(message.chatId, id));
 
     const [chatsDeleted] = await db
@@ -140,7 +205,11 @@ export async function saveMessages({
   }
 }
 
-export async function getMessagesByChatId({ id }: { id: string }) {
+export async function getMessagesByChatId({
+  id,
+}: {
+  id: string;
+}): Promise<DBMessage[]> {
   try {
     return await db
       .select()

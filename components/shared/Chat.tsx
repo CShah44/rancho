@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Brain, MessageCircle, Globe } from "lucide-react";
+import { Brain, MessageCircle, Globe, X } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Message as M } from "@ai-sdk/react";
 import { toast } from "sonner";
 import type { User } from "next-auth";
 import PureChatHeader from "./chat-header";
+import Image from "next/image";
 
 interface ChatProps {
   user: User;
@@ -22,6 +23,13 @@ interface ChatProps {
 const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
   const [mode, setMode] = useState("chat");
   const [timeGreeting, setTimeGreeting] = useState("Good day");
+
+  // for file uploads
+  const [files, setFiles] = useState<FileList | undefined>(undefined);
+  const [filePreviews, setFilePreviews] = useState<
+    { name: string; url: string; type: string }[]
+  >([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const modes = {
     chat: {
@@ -91,8 +99,59 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Generate previews when files are selected
+  useEffect(() => {
+    if (!files) {
+      setFilePreviews([]);
+      return;
+    }
+
+    const previews = Array.from(files).map((file) => {
+      const url = URL.createObjectURL(file);
+      return {
+        name: file.name,
+        url,
+        type: file.type,
+      };
+    });
+
+    setFilePreviews(previews);
+
+    // Cleanup function to revoke object URLs
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [files]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setFiles(event.target.files);
+    }
+  };
+
+  const removeFile = (fileName: string) => {
+    if (!files) return;
+
+    const dataTransfer = new DataTransfer();
+
+    Array.from(files).forEach((file) => {
+      if (file.name !== fileName) {
+        dataTransfer.items.add(file);
+      }
+    });
+
+    setFiles(dataTransfer.files.length > 0 ? dataTransfer.files : undefined);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.files = dataTransfer.files;
+    }
+  };
+
   return (
-    <div className="flex flex-col min-w-0 h-dvh">
+    <div
+      className="flex flex-col min-w-0 h-dvh overflow-y-scroll"
+      style={{ scrollbarWidth: "none" }}
+    >
       <PureChatHeader />
       {messages.length <= 0 ? (
         <div className="text-center space-y-6 flex-grow flex flex-col justify-center">
@@ -138,7 +197,63 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
       )}
 
       <div className="rounded-2xl bg-zinc-800/50 backdrop-blur-sm p-4 m-4 shadow-xl border border-zinc-700/30">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        {filePreviews.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {filePreviews.map((file) => (
+              <div key={file.name} className="relative group">
+                {file.type.startsWith("image/") ? (
+                  <div className="relative w-16 h-16 rounded-md overflow-hidden border border-zinc-600">
+                    <Image
+                      width={64}
+                      height={64}
+                      src={file.url}
+                      alt={file.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      onClick={() => removeFile(file.name)}
+                      className="absolute top-0 right-0 bg-black/70 p-1 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove file"
+                    >
+                      <X size={12} className="text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative w-16 h-16 flex items-center justify-center bg-zinc-700 rounded-md border border-zinc-600">
+                    <Paperclip size={20} className="text-zinc-400" />
+                    <button
+                      onClick={() => removeFile(file.name)}
+                      className="absolute top-0 right-0 bg-black/70 p-1 rounded-bl-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove file"
+                    >
+                      <X size={12} className="text-white" />
+                    </button>
+                  </div>
+                )}
+                <div className="text-xs text-zinc-400 mt-1 truncate max-w-16">
+                  {file.name.length > 12
+                    ? `${file.name.substring(0, 10)}...`
+                    : file.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form
+          onSubmit={(event) => {
+            handleSubmit(event, {
+              experimental_attachments: files,
+            });
+
+            setFiles(undefined);
+
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+          }}
+          className="flex gap-2"
+        >
           <Input
             placeholder="What do you want to learn?"
             value={input}
@@ -147,13 +262,27 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
             disabled={status === "streaming"}
           />
           <Button
-            variant="ghost"
-            size="icon"
-            className="hover:bg-zinc-700/50 rounded-xl"
+            className="hover:bg-zinc-300 rounded-2xl"
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
             type="button"
+            disabled={files && files.length >= 5}
           >
-            <Paperclip className="text-zinc-400" size={20} />
-          </Button>
+            <Paperclip className="text-black" size={20} />
+            <Input
+              type="file"
+              onChange={(e) => {
+                if (e.target.files && (!files || files.length < 5)) {
+                  handleFileChange(e);
+                }
+              }}
+              multiple
+              hidden
+              ref={fileInputRef}
+              placeholder="Upload files"
+              accept="image/*,.pdf"
+            />
+          </Button>{" "}
           <Button
             type="submit"
             className="bg-white hover:bg-white/90 text-black rounded-xl transition-all duration-200 hover:shadow-lg disabled:opacity-50"

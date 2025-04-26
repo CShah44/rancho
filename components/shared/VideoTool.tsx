@@ -11,6 +11,7 @@ import {
   Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MemoizedMarkdown } from "./memoized-markdown";
 
 interface VideoToolResult {
   type: string;
@@ -21,7 +22,7 @@ interface VideoToolResult {
   mimeType: string;
 }
 
-const VideoTool = ({ video }: { video: VideoToolResult }) => {
+const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -316,7 +317,12 @@ const VideoTool = ({ video }: { video: VideoToolResult }) => {
 
       <div className="p-4 bg-zinc-800 text-white border-t border-zinc-700">
         <h4 className="font-medium mb-2">About this video</h4>
-        <p className="text-sm text-zinc-300">{video.explanation}</p>
+        <p className="text-sm text-zinc-300">
+          <MemoizedMarkdown
+            id={id + "-video-explanation"}
+            content={video.explanation}
+          />
+        </p>
       </div>
     </div>
   );
