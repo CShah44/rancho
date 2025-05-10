@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import Chat from "@/components/shared/Chat";
-import Hero from "@/components/shared/Hero";
+import Hero from "@/components/shared/Hero/Hero";
 import { generateUUID } from "@/lib/utils";
 
 export default async function Home() {

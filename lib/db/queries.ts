@@ -83,9 +83,7 @@ export async function deleteChatById({ id }: { id: string }) {
                   headers: {
                     "Content-Type": "application/json",
                   },
-                  body: JSON.stringify({
-                    video_url: part.toolInvocation.result.videoUrl,
-                  }),
+                  body: part.toolInvocation.result.videoUrl,
                 }
               );
 
