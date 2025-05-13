@@ -203,3 +203,120 @@ async def delete_video(video_url: str = Body(...)):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting video: {str(e)}")
+    
+class GameRequest(BaseModel):
+    title: str
+    concept: str
+    difficulty: str
+    gameType: str
+    instructions: str
+
+@app.post("/generate-game")
+async def generate_game(request: GameRequest):
+    try:
+        # Generate a unique ID for the game
+        game_id = str(uuid.uuid4())
+        
+        # Generate p5.js code based on the parameters
+        # This could use an LLM or templates
+        p5js_code = generate_game_code(request.concept, request.difficulty, request.gameType, request.instructions)
+        
+        # Generate a preview image
+        # preview_image_url = generate_preview_image(request.title, request.concept)
+        
+        # Store the game code in Cloudinary as a JSON file
+        game_data = {
+            "title": request.title,
+            "concept": request.concept,
+            "difficulty": request.difficulty,
+            "gameType": request.gameType,
+            "instructions": request.instructions,
+            "description": p5js_code["game_description"],
+            "code": p5js_code["game_code"],
+        }
+
+        # Upload the game data to Cloudinary
+        try:
+            temp_file_path = os.path.join(tempfile.gettempdir(), f"game_{game_id}.json")
+            with open(temp_file_path, 'w', encoding='utf-8') as temp_file:
+                json.dump(game_data, temp_file)
+            
+            # Verify the file exists and has content
+            if not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
+                raise Exception("Failed to create temporary file or file is empty")
+            
+            # Upload the temporary file to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                temp_file_path,
+                resource_type="raw",
+                folder="games",
+                public_id=game_id
+            )
+            print(f"Game data uploaded to Cloudinary: {upload_result}")
+        except Exception as e:
+            print(f"Error uploading game data to Cloudinary: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to upload game data to Cloudinary")
+        
+        return {
+            "game_id": game_id,
+            # "preview_image_url": preview_image_url,
+            "cloudinary_url": upload_result["secure_url"],
+            "description": p5js_code["game_description"],
+        }
+    except Exception as e:
+        print(f"Error generating game: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def generate_game_code(concept, difficulty, game_type, instructions):
+    
+    prompt = f"""
+        Create a simple educational game using Phaser 3 to teach the concept: ${concept}.
+        Difficulty level: ${difficulty}.
+        The game should be fully functional, simple to play, and contained in a single JavaScript file.
+        The game should use the DOM element with id 'phaser-game' as its container.
+        Please provide only valid JavaScript code that creates a complete Phaser 3 game.
+        Follow the {game_type} and instructions: ${instructions}.
+
+        Do not reference any images or external files. Use simple objects and colors to represent game elements.
+    """
+
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", contents=prompt, config={
+            'response_mime_type': 'application/json',
+            'response_schema': {
+                "type": "object",
+                "properties": {
+                    "game_code": {
+                        "type": "string"
+                    },
+                    "game_description": {
+                        "type": "string"
+                    },
+                },
+                "required": ["game_code", "game_description"]
+            }
+        }
+    )
+
+    json_response = json.loads(response.text)
+    game_code = json_response["game_code"]
+    game_description = json_response["game_description"]
+
+    return {
+        "game_code": game_code,
+        "game_description": game_description
+    }
+
+def generate_preview_image(title, concept):
+    # Generate a preview image using text
+    # Could use another API or Cloudinary's text overlay features
+    result = cloudinary.uploader.upload(
+        "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+        public_id=f"game_previews/{title.replace(' ', '_')}",
+        transformation=[
+            {"width": 600, "height": 400, "crop": "fill", "background": "auto"},
+            {"overlay": {"font_family": "Arial", "font_size": 30, "text": title}},
+            {"flags": "layer_apply", "gravity": "north", "y": 20}
+        ]
+    )
+    return result["secure_url"]
