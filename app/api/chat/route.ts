@@ -290,6 +290,98 @@ export async function POST(req: Request) {
             }
           },
         },
+        // Add this to your existing tools object
+        game: {
+          description:
+            "Generate interactive educational games that help students learn concepts through play",
+          parameters: z.object(
+            {
+              title: z
+                .string()
+                .describe("Descriptive title for the educational game"),
+              concept: z
+                .string()
+                .describe(
+                  "The scientific or mathematical concept the game will teach"
+                ),
+              difficulty: z
+                .enum(["easy", "medium", "hard"])
+                .describe("The difficulty level of the game"),
+              gameType: z
+                .enum(["simulation", "puzzle", "quiz", "adventure"])
+                .describe("The type of game to generate"),
+              instructions: z
+                .string()
+                .describe("Brief instructions on how to play the game"),
+            },
+            {
+              required_error: "Game parameters are required",
+              invalid_type_error: "Invalid game parameter types",
+            }
+          ),
+          execute: async ({
+            title,
+            concept,
+            difficulty,
+            gameType,
+            instructions,
+          }) => {
+            try {
+              // Call the FastAPI backend to generate the game
+              const response = await fetch(
+                "http://localhost:8000/generate-game",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    title,
+                    concept,
+                    difficulty,
+                    gameType,
+                    instructions,
+                  }),
+                }
+              );
+
+              if (!response.ok) {
+                const errorText = await response.text();
+                return {
+                  type: "text",
+                  status: "error",
+                  text: `Error generating game: ${errorText}`,
+                };
+              }
+
+              const data: {
+                game_id: string;
+                cloudinary_url: string;
+                description?: string;
+              } = await response.json();
+              const gameId = data.game_id;
+              // const previewImageUrl = data.preview_image_url;
+
+              return {
+                type: "game",
+                status: "success",
+                title: title,
+                gameId: gameId,
+                // previewImageUrl: previewImageUrl,
+                playUrl: `/play/${gameId}`,
+                concept: concept,
+                description: data?.description,
+                instructions: instructions,
+              };
+            } catch (error) {
+              return {
+                type: "text",
+                status: "error",
+                text: `Failed to generate game: ${error}`,
+              };
+            }
+          },
+        },
       },
       onFinish: async (output) => {
         try {
