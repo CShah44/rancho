@@ -146,6 +146,7 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
           <div
             key={image.imageUrl}
             className="relative aspect-square overflow-hidden rounded-md cursor-pointer group"
+            style={{ width: "100%", height: "200px" }} // Fixed height for thumbnails
             onClick={() => openModal(image)}
           >
             <Image
@@ -185,6 +186,8 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
               style={{
                 maxWidth: "100%",
                 maxHeight: "100%",
+                width: "auto", // Added width auto
+                height: "auto", // Added height auto
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -203,9 +206,9 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
                 <Image
                   src={selectedImage.imageUrl}
                   alt={selectedImage.title}
-                  width={1000}
-                  height={1000}
-                  className="max-h-[80vh] object-contain select-none"
+                  width={800}
+                  height={600}
+                  className="max-h-[80vh] w-auto h-auto object-contain select-none"
                   priority
                   draggable={false}
                 />

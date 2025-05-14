@@ -11,6 +11,7 @@ interface GameData {
   instructions: string;
   description: string;
   code: string;
+  id: string;
 }
 
 export default async function GamePage({

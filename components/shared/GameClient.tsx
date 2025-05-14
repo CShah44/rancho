@@ -21,10 +21,11 @@ interface GameData {
   instructions: string;
   description: string;
   code: string;
+  id: string;
 }
 
 // Dynamically import the PhaserWrapper component with no SSR
-const PhaserWrapper = dynamic(() => import("./PhaserWrapper"), {
+const PygameWrapper = dynamic(() => import("./PygameWrapper"), {
   ssr: false,
 });
 
@@ -187,7 +188,9 @@ export default function GameClient({
             }`}
             style={{ height: "600px", width: "100%" }}
           >
-            {gameData?.code && <PhaserWrapper gameCode={gameData.code} />}
+            {gameData?.code && (
+              <PygameWrapper gameCode={gameData.code} gameId={gameData.id} />
+            )}
           </div>
         </div>
       </div>

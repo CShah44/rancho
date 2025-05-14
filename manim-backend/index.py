@@ -74,6 +74,7 @@ async def explain_concept(request: ConceptRequest):
                 - Explain the educational value of specific visual elements
                 - Use clear, direct language without unnecessary jargon
                 
+                DO NOT REFERENCE ANY EXTERNAL SVG OR IMAGE FILES.
                 Return only the Python code without any explanations or markdown.
                 Also provide a brief explanation of the visualization. Address the animation as visualization in explanation.
             """
@@ -233,6 +234,7 @@ async def generate_game(request: GameRequest):
             "instructions": request.instructions,
             "description": p5js_code["game_description"],
             "code": p5js_code["game_code"],
+            "id": game_id,
         }
 
         # Upload the game data to Cloudinary
@@ -270,14 +272,73 @@ async def generate_game(request: GameRequest):
 def generate_game_code(concept, difficulty, game_type, instructions):
     
     prompt = f"""
-        Create a simple educational game using Phaser 3 to teach the concept: ${concept}.
-        Difficulty level: ${difficulty}.
-        The game should be fully functional, simple to play, and contained in a single JavaScript file.
-        The game should use the DOM element with id 'phaser-game' as its container.
-        Please provide only valid JavaScript code that creates a complete Phaser 3 game.
-        Follow the {game_type} and instructions: ${instructions}.
-
-        Do not reference any images or external files. Use simple objects and colors to represent game elements.
+        Create a simple educational game using Pygame to teach the concept: {concept}.
+        Difficulty level: {difficulty}.
+        Game type: {game_type}
+        Instructions: {instructions}
+        
+        IMPORTANT REQUIREMENTS FOR PYGBAG COMPATIBILITY:
+        1. The game must use asyncio and be compatible with Pygbag for web deployment
+        2. Include the following imports: import asyncio, pygame, math, random, sys
+        3. Structure the code with an async main() function
+        4. Use the following template structure:
+        
+        ```python
+        import asyncio
+        import pygame
+        import math
+        import random
+        import sys
+        
+        # Initialize pygame
+        pygame.init()
+        
+        # Game constants
+        WIDTH, HEIGHT = 800, 600
+        FPS = 60
+        
+        # Define colors
+        WHITE = (255, 255, 255)
+        BLACK = (0, 0, 0)
+        # Add more colors as needed
+        
+        # Create the screen
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("{concept} Learning Game")
+        
+        # Game variables and classes here
+        
+        async def main():
+            # Game initialization
+            clock = pygame.time.Clock()
+            running = True
+            
+            # Game loop
+            while running:
+                # Handle events
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                
+                # Game logic
+                
+                # Drawing
+                screen.fill(BLACK)
+                
+                # Your drawing code here
+                
+                pygame.display.flip()
+                clock.tick(FPS)
+                await asyncio.sleep(0)
+            
+            pygame.quit()
+            
+        asyncio.run(main())
+        ```
+        
+        Do not reference any external files or images. Use simple shapes and colors.
+        The game should be educational, teaching the concept of {concept} through interactive gameplay.
+        Make sure the game is fully functional and error-free.
     """
 
     response = client.models.generate_content(
