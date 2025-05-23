@@ -3,19 +3,9 @@
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { useParams, useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -26,7 +16,8 @@ import type { Chat } from "@/lib/db/schema";
 import { fetcher } from "@/lib/utils";
 import { ChatItem } from "./sidebar-history-item";
 import useSWRInfinite from "swr/infinite";
-import { LoaderIcon } from "lucide-react";
+import { LoaderIcon, X } from "lucide-react";
+import { Button } from "../ui/button";
 
 type GroupedChats = {
   today: Chat[];
@@ -93,6 +84,73 @@ export function getChatHistoryPaginationKey(
   return `/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
 }
 
+// Custom Delete Confirmation Modal
+function DeleteConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEsc);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-zinc-900 border border-zinc-700 text-white p-6 rounded-lg w-full max-w-md">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-zinc-400 hover:text-white"
+        >
+          <X size={18} />
+        </button>
+
+        <h2 className="text-xl font-semibold mb-2">Are you absolutely sure?</h2>
+        <p className="text-zinc-400 mb-6">
+          This action cannot be undone. This will permanently delete your chat
+          and remove it from our servers.
+        </p>
+
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SidebarHistory({ user }: { user: User | undefined }) {
   const { setOpenMobile } = useSidebar();
   const { id } = useParams();
@@ -109,7 +167,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const hasReachedEnd = paginatedChatHistories
     ? paginatedChatHistories.some((page) => page.hasMore === false)
@@ -120,7 +178,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     : false;
 
   const handleDelete = async () => {
-    const deletePromise = fetch(`/api/chat?id=${deleteId}`, {
+    if (!deleteId) return;
+
+    const chatIdToDelete = deleteId;
+    const isCurrentChat = chatIdToDelete === id;
+
+    const deletePromise = fetch(`/api/chat?id=${chatIdToDelete}`, {
       method: "DELETE",
     });
 
@@ -128,24 +191,26 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       loading: "Deleting chat...",
       success: () => {
         mutate((chatHistories) => {
-          if (chatHistories) {
-            return chatHistories.map((chatHistory) => ({
-              ...chatHistory,
-              chats: chatHistory.chats.filter((chat) => chat.id !== deleteId),
-            }));
-          }
+          if (!chatHistories) return chatHistories;
+
+          return chatHistories.map((chatHistory) => ({
+            ...chatHistory,
+            chats: chatHistory.chats.filter(
+              (chat) => chat.id !== chatIdToDelete
+            ),
+          }));
         });
+
+        if (isCurrentChat) {
+          router.push("/");
+        }
 
         return "Chat deleted successfully";
       },
       error: "Failed to delete chat",
     });
 
-    setShowDeleteDialog(false);
-
-    if (deleteId === id) {
-      router.push("/");
-    }
+    setDeleteId(null);
   };
 
   if (!user && !isLoading) {
@@ -160,19 +225,19 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || (!paginatedChatHistories && isValidating)) {
     return (
       <SidebarGroup>
-        <div className="px-2 py-1 text-xs text-zinc-300">Today</div>
+        <div className="px-2 py-1 text-xs text-zinc-300">Loading chats</div>
         <SidebarGroupContent>
           <div className="flex flex-col">
-            {[44, 32, 28, 64, 52].map((item) => (
+            {[44, 32, 28, 64, 52].map((item, index) => (
               <div
-                key={item}
-                className="rounded-md h-8 flex gap-2 px-2 items-center"
+                key={index}
+                className="rounded-md h-8 flex gap-2 px-2 items-center my-1"
               >
                 <div
-                  className="h-4 rounded-md flex-1 max-w-[--skeleton-width] bg-sidebar-accent-foreground/10"
+                  className="h-4 rounded-md flex-1 max-w-[--skeleton-width] bg-sidebar-accent-foreground/10 animate-pulse"
                   style={
                     {
                       "--skeleton-width": `${item}%`,
@@ -226,7 +291,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             isActive={chat.id === id}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
-                              setShowDeleteDialog(true);
+                              setShowDeleteModal(true);
                             }}
                             setOpenMobile={setOpenMobile}
                           />
@@ -246,7 +311,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             isActive={chat.id === id}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
-                              setShowDeleteDialog(true);
+                              setShowDeleteModal(true);
                             }}
                             setOpenMobile={setOpenMobile}
                           />
@@ -266,7 +331,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             isActive={chat.id === id}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
-                              setShowDeleteDialog(true);
+                              setShowDeleteModal(true);
                             }}
                             setOpenMobile={setOpenMobile}
                           />
@@ -286,7 +351,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             isActive={chat.id === id}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
-                              setShowDeleteDialog(true);
+                              setShowDeleteModal(true);
                             }}
                             setOpenMobile={setOpenMobile}
                           />
@@ -306,7 +371,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             isActive={chat.id === id}
                             onDelete={(chatId) => {
                               setDeleteId(chatId);
-                              setShowDeleteDialog(true);
+                              setShowDeleteModal(true);
                             }}
                             setOpenMobile={setOpenMobile}
                           />
@@ -326,45 +391,22 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
             }}
           />
 
-          {hasReachedEnd ? (
-            <div className="px-2 text-zinc-500 w-full flex flex-row justify-center items-center text-sm gap-2 mt-8">
-              You have reached the end of your chat history.
-            </div>
-          ) : (
-            <div className="p-2 text-zinc-500 dark:text-zinc-400 flex flex-row gap-2 items-center mt-8">
+          {!hasReachedEnd && !isLoading && (
+            <div className="p-2 text-zinc-500 dark:text-zinc-400 flex flex-row gap-2 items-center justify-center mt-8">
               <div className="animate-spin">
-                <LoaderIcon />
+                <LoaderIcon size={16} />
               </div>
-              <div>Loading Chats...</div>
+              <div className="text-sm">Loading more chats...</div>
             </div>
           )}
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-zinc-900 border border-zinc-700 text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">
-              Are you absolutely sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              This action cannot be undone. This will permanently delete your
-              chat and remove it from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

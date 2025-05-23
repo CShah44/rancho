@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { MessageCircle, Globe, X } from "lucide-react";
+import { MessageCircle, Globe, X, GamepadIcon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import type { User } from "next-auth";
 import PureChatHeader from "./chat-header";
 import Image from "next/image";
+import Link from "next/link";
 
 interface ChatProps {
   user: User;
@@ -62,6 +63,11 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
       },
       onError: () => {
         toast.error("Something went wrong. Please try again.");
+      },
+      onToolCall: (tool) => {
+        if (tool.toolCall.toolName === "video") {
+          toast("Video generation might take up a few minutes.");
+        }
       },
     });
 
@@ -147,6 +153,40 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
     }
   };
 
+  // Creative thinking animation
+  const ThinkingAnimation = () => {
+    const dots = ["⚙️", "💡", "🧠", "✨", "🔍"];
+    const [dotIndex, setDotIndex] = useState(0);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setDotIndex((prev) => (prev + 1) % dots.length);
+      }, 400);
+
+      return () => clearInterval(interval);
+    }, [dots.length]);
+
+    return (
+      <div className="flex justify-center">
+        <div className="bg-zinc-800/80 backdrop-blur-sm p-4 rounded-lg max-w-[85%] shadow-lg border border-zinc-700/30">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <div className="animate-pulse text-2xl">{dots[dotIndex]}</div>
+            </div>
+            <div className="flex flex-col">
+              <div className="text-sm font-medium text-zinc-200">
+                Rancho is thinking...
+              </div>
+              <div className="text-xs text-zinc-400">
+                Connecting neurons and gathering insights!
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className="flex flex-col min-w-0 h-dvh overflow-y-scroll"
@@ -174,16 +214,7 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
             {messages.map((message) => (
               <Message key={message.id} message={message} />
             ))}
-            {status === "streaming" && (
-              <div className="flex justify-center">
-                <div className="bg-zinc-800/50 backdrop-blur-sm p-3 rounded-lg max-w-[85%]">
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="animate-spin" size={20} />
-                    <div className="text-sm text-zinc-400">Thinking...</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {status === "streaming" && <ThinkingAnimation />}
             {error && (
               <div className="flex justify-center">
                 <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg max-w-[85%]">
@@ -295,7 +326,7 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
             )}
           </Button>
         </form>
-        <div className="flex items-center gap-2 mt-3 overflow-x-auto">
+        <div className="flex items-center justify-between gap-2 mt-3 overflow-x-auto">
           <div className="flex h-[40px] bg-zinc-700/50 rounded-full p-1">
             {Object.entries(modes).map(([key, value]) => {
               const isActive = mode === key;
@@ -320,6 +351,18 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
               );
             })}
           </div>
+
+          {/* Game generation button */}
+          <Link href="/game">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2 rounded-full bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-100 border border-purple-500/30"
+            >
+              <GamepadIcon size={18} className="text-purple-400" />
+              <span>Generate Game</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
