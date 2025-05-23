@@ -37,7 +37,7 @@ export async function generateP5Code({
     }
 
     const { object } = await generateObject({
-      model: google("gemini-2.0-flash-001"),
+      model: google("gemini-2.5-flash-preview-05-20"),
       output: "object",
       schema: z.object({
         info: z
