@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Brain, MessageCircle, Globe, X } from "lucide-react";
+import { MessageCircle, Globe, X } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,11 +42,11 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
       label: "Rancho on Web",
       color: "text-blue-500",
     },
-    reasoning: {
-      icon: Brain,
-      label: "Rancho Thinks",
-      color: "text-green-500",
-    },
+    // reasoning: {
+    //   icon: Brain,
+    //   label: "Rancho Thinks",
+    //   color: "text-green-500",
+    // },
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
