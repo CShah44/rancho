@@ -180,8 +180,13 @@ async def explain_concept(request: ConceptRequest):
     # If we've exhausted all attempts, raise an exception
     raise HTTPException(status_code=500, detail=f"Failed after {max_attempts} attempts. Last error: {last_error}")
 
+
+class VideoRequest(BaseModel):
+    video_url: str
+
 @app.delete("/delete-video")
-async def delete_video(video_url: str = Body(...)):
+async def delete_video(request: VideoRequest):
+    video_url = request.video_url
     try:
         # Extract the public_id from the Cloudinary URL
         # Cloudinary URLs typically look like: https://res.cloudinary.com/cloud_name/video/upload/v1234567890/folder/public_id.mp4

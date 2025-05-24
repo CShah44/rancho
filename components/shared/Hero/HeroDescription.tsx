@@ -9,7 +9,7 @@ export default function HeroDescription() {
       transition={{ duration: 0.6, delay: 1.2 }}
     >
       Experience learning like never before with visual animations, interactive
-      quizzes, and personalized explanations - all in one intelligent platform.
+      quizzes and games - all in one intelligent platform.
     </motion.p>
   );
 }

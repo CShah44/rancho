@@ -75,7 +75,6 @@ export async function deleteChatById({ id }: { id: string }) {
           for (const part of parts) {
             if (part.toolInvocation?.result?.videoUrl) {
               // Delete the video from the server, send request to your server to delete the video
-              console.log(part.toolInvocation.result.videoUrl); // Log the video URL for debugging
               const response = await fetch(
                 "http://localhost:8000/delete-video",
                 {
@@ -83,7 +82,9 @@ export async function deleteChatById({ id }: { id: string }) {
                   headers: {
                     "Content-Type": "application/json",
                   },
-                  body: part.toolInvocation.result.videoUrl,
+                  body: JSON.stringify({
+                    video_url: part.toolInvocation.result.videoUrl,
+                  }),
                 }
               );
 

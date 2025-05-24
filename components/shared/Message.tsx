@@ -17,6 +17,7 @@ interface MessageProps {
   message: MessageType;
 }
 
+// TODO RENDER MATH
 const Message = ({ message }: MessageProps) => {
   const [expandedPdf, setExpandedPdf] = useState<string | null>(null);
 

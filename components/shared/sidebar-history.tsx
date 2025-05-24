@@ -230,22 +230,21 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       <SidebarGroup>
         <div className="px-2 py-1 text-xs text-zinc-300">Loading chats</div>
         <SidebarGroupContent>
-          <div className="flex flex-col">
-            {[44, 32, 28, 64, 52].map((item, index) => (
-              <div
-                key={index}
-                className="rounded-md h-8 flex gap-2 px-2 items-center my-1"
-              >
+          <div className="flex flex-col space-y-2 px-2 py-1">
+            {Array(5)
+              .fill(0)
+              .map((_, index) => (
                 <div
-                  className="h-4 rounded-md flex-1 max-w-[--skeleton-width] bg-sidebar-accent-foreground/10 animate-pulse"
-                  style={
-                    {
-                      "--skeleton-width": `${item}%`,
-                    } as React.CSSProperties
-                  }
-                />
-              </div>
-            ))}
+                  key={index}
+                  className="flex items-center gap-2 rounded-md p-2 bg-black/30"
+                >
+                  <div className="h-4 w-4 rounded-full bg-white/30 animate-pulse" />
+                  <div
+                    className="h-4 rounded-md bg-white/40 animate-pulse"
+                    style={{ width: `${Math.floor(Math.random() * 40) + 40}%` }}
+                  />
+                </div>
+              ))}
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -281,7 +280,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                   <div className="flex flex-col gap-6">
                     {groupedChats.today.length > 0 && (
                       <div>
-                        <div className="px-2 py-1 text-xs text-zinc-400">
+                        <div className="px-2 my-1 text-xs text-zinc-400">
                           Today
                         </div>
                         {groupedChats.today.map((chat) => (

@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 
 const features = [
   { id: 1, name: "Visual learning" },
-  { id: 2, name: "Interactive quizzes" },
-  { id: 3, name: "Personalized learning" },
+  { id: 2, name: "Quizzes" },
+  { id: 3, name: "Interactive games and sketches" },
 ];
 
 export default function HeroFeatureList() {

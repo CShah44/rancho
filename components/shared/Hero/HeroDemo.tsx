@@ -52,7 +52,7 @@ export default function HeroDemo() {
             />
             <ChatMessage
               type="user"
-              content="Can you explain photosynthesis with a visual?"
+              content="Can you explain the working of a xerox machine?"
               delay={3.2}
             />
             <ChatMessage
@@ -60,8 +60,8 @@ export default function HeroDemo() {
               content={
                 <>
                   <p>
-                    Of course! Here&apos;s a visual explanation of
-                    photosynthesis:
+                    Of course! Here&apos;s a visual explanation of the xerox
+                    machine process:
                   </p>
                   <div className="mt-2 bg-indigo-900/30 rounded-md p-3 text-center">
                     <div className="relative aspect-video bg-black/40 rounded overflow-hidden flex items-center justify-center">

@@ -26,7 +26,7 @@ const PureChatItem = ({
   setOpenMobile: (open: boolean) => void;
 }) => {
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem className="mb-1">
       <SidebarMenuButton asChild isActive={isActive}>
         <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
           <span>{chat.title}</span>
