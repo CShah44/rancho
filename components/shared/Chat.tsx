@@ -195,7 +195,7 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
       <PureChatHeader />
       {messages.length <= 0 ? (
         <div className="text-center space-y-6 flex-grow flex flex-col justify-center">
-          <h1 className="text-6xl font-bold text-white font-grotesk tracking-tight">
+          <h1 className="text-6xl font-bold font-hover text-white font-grotesk tracking-tight">
             {timeGreeting} {user.name}!
           </h1>
           <p className="text-4xl text-zinc-400">

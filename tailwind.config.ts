@@ -10,7 +10,7 @@ module.exports = {
       fontFamily: {
         sans: ["var(--font-inter)"],
         grotesk: ["var(--font-main)"],
-        dmSans: ["var(--font-sceondary)"],
+        dmSans: ["var(--font-secondary)"],
       },
     },
   },

@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/queries";
 import { generateTitleFromUserMessage } from "./actions";
 import { getMostRecentUserMessage, getTrailingMessageId } from "@/lib/utils";
+import { generateP5Code } from "@/app/game/actions";
 
 // Allow streaming responses up to 60 seconds for video generation
 export const maxDuration = 180;
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
         useSearchGrounding: search,
       }),
       system: `
-        You are Rancho, an exceptional and innovative high school science and mathematics teacher at Dhirubhai Ambani International School.
+        You are Rancho, an exceptional and innovative high school science and mathematics personal tutor.
         Your teaching philosophy emphasizes:
         - Creative problem-solving and intuitive understanding over rote memorization
         - Visual and interactive learning experiences that make complex concepts simple
@@ -67,16 +68,20 @@ export async function POST(req: Request) {
         - Include analogies and metaphors that make concepts relatable
         - Suggest visualization opportunities when explaining complex topics
         
-        You have access to three tools:
+        You have access to four tools:
         1. Video animations - These are high-quality educational animations that illustrate concepts dynamically
         2. Images - These are static visuals that can help explain concepts or provide examples
         3. Quiz - Generate interactive quizzes to test understanding of concepts
+        4. Game - Create interactive p5.js sketches and games to demonstrate scientific and mathematical concepts
         
         Prioritize using video animations when explaining complex concepts that benefit from dynamic visualization.
         Use images when a static visual would suffice or when specifically requested by the student.
         Suggest quizzes when you want to test the student's understanding of a concept you've just explained.
+        Use games when you want to provide an interactive demonstration of a concept, especially for physics, mathematics, or computer science topics.
         
         When creating quizzes, make sure they are educational, challenging but fair, and provide helpful explanations for the correct answers.
+        
+        When creating games, focus on making them educational and relevant to the scientific or mathematical concept being discussed. Games should be simple enough for students to understand but engaging enough to maintain interest.
       `,
       messages,
       tools: {
@@ -286,6 +291,56 @@ export async function POST(req: Request) {
               return {
                 type: "text",
                 text: `I couldn't generate a quiz at the moment. Let's continue with our discussion about ${topic}.`,
+              };
+            }
+          },
+        },
+        game: {
+          description:
+            "Generate interactive p5.js sketches and games to demonstrate scientific or mathematical concepts",
+          parameters: z.object(
+            {
+              topic: z
+                .string()
+                .describe(
+                  "The specific scientific or mathematical concept the game should demonstrate"
+                ),
+              description: z
+                .string()
+                .describe(
+                  "A detailed description of the game or sketch to be created, including what scientific or mathematical principles it should demonstrate"
+                ),
+            },
+            {
+              required_error: "Topic and description are required",
+              invalid_type_error: "Topic and description must be strings",
+            }
+          ),
+          execute: async ({ topic, description }) => {
+            try {
+              const result = await generateP5Code({ prompt: description });
+
+              if (result.success && result.code) {
+                return {
+                  type: "game",
+                  status: "success",
+                  topic: topic,
+                  title: result.title || "Interactive Sketch",
+                  code: result.code,
+                  info: result.info || "",
+                };
+              } else {
+                return {
+                  type: "text",
+                  status: "error",
+                  text: "Failed to generate the game. Please try a different description or concept.",
+                };
+              }
+            } catch (error) {
+              console.error("Game generation error:", error);
+              return {
+                type: "text",
+                text: `I couldn't generate a game at the moment. Let's continue with our discussion about ${topic}.`,
               };
             }
           },

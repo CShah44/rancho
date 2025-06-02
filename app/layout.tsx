@@ -36,7 +36,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.className} ${dmSans.variable} ${inter.variable} font-sans antialiased pointer-events-auto`}
+        className={`${spaceGrotesk.className} ${dmSans.variable} ${inter.className} antialiased pointer-events-auto`}
       >
         <main>
           <SessionProvider>

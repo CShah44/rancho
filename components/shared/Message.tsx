@@ -13,6 +13,7 @@ import VideoTool from "./VideoTool";
 import QuizComponent from "./QuizComponent";
 import Image from "next/image";
 import { useState } from "react";
+import GameTool from "./GameTool";
 interface MessageProps {
   message: MessageType;
 }
@@ -72,6 +73,22 @@ const Message = ({ message }: MessageProps) => {
                       questions={part.toolInvocation.result.questions}
                     />
                   );
+                }
+
+                if (
+                  part.toolInvocation.toolName === "game" &&
+                  part.toolInvocation.state === "result"
+                ) {
+                  if (part.toolInvocation.result.status === "success") {
+                    console.log(part.toolInvocation.result);
+                    return (
+                      <GameTool
+                        key={`${message.id}-${i}-game`}
+                        // id={message.id}
+                        game={part.toolInvocation.result}
+                      />
+                    );
+                  }
                 }
 
                 if (

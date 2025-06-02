@@ -213,7 +213,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     setDeleteId(null);
   };
 
-  if (!user && !isLoading) {
+  if (!user && !isLoading && !paginatedChatHistories && !isValidating) {
     return (
       <SidebarGroup>
         <SidebarGroupContent>
