@@ -80,7 +80,6 @@ const Message = ({ message }: MessageProps) => {
                   part.toolInvocation.state === "result"
                 ) {
                   if (part.toolInvocation.result.status === "success") {
-                    console.log(part.toolInvocation.result);
                     return (
                       <GameTool
                         key={`${message.id}-${i}-game`}

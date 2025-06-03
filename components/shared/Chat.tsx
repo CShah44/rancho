@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { MessageCircle, Globe, X, GamepadIcon } from "lucide-react";
+import { MessageCircle, Globe, X } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import type { User } from "next-auth";
 import PureChatHeader from "./chat-header";
 import Image from "next/image";
-import Link from "next/link";
 
 interface ChatProps {
   user: User;
@@ -61,7 +60,8 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
         id: chatId,
         search: mode === "search",
       },
-      onError: () => {
+      onError: (e) => {
+        console.log(e);
         toast.error("Something went wrong. Please try again.");
       },
       onToolCall: (tool) => {
@@ -351,18 +351,6 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
               );
             })}
           </div>
-
-          {/* Game generation button */}
-          <Link href="/game">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2 rounded-full bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-purple-100 border border-purple-500/30"
-            >
-              <GamepadIcon size={18} className="text-purple-400" />
-              <span>Generate Game</span>
-            </Button>
-          </Link>
         </div>
       </div>
     </div>

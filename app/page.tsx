@@ -10,7 +10,7 @@ export default async function Home() {
   const id = generateUUID();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-800 flex flex-col items-center">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-800 flex flex-col items-center">
       {!session ? (
         <Hero />
       ) : (
@@ -18,6 +18,6 @@ export default async function Home() {
           <Chat chatId={id} user={session.user!} initialMessages={[]} />
         </div>
       )}
-    </main>
+    </div>
   );
 }

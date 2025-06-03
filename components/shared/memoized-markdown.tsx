@@ -13,9 +13,16 @@ function parseMarkdownIntoBlocks(markdown: string): string[] {
 const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => {
     return (
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-        {content}
-      </ReactMarkdown>
+      <div className="math-content">
+        <ReactMarkdown
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[
+            [rehypeKatex, { output: "mathml", throwOnError: false }],
+          ]}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
     );
   },
   (prevProps, nextProps) => {
@@ -30,9 +37,13 @@ export const MemoizedMarkdown = memo(
   ({ content, id }: { content: string; id: string }) => {
     const blocks = useMemo(() => parseMarkdownIntoBlocks(content), [content]);
 
-    return blocks.map((block, index) => (
-      <MemoizedMarkdownBlock content={block} key={`${id}-block_${index}`} />
-    ));
+    return (
+      <div className="">
+        {blocks.map((block, index) => (
+          <MemoizedMarkdownBlock content={block} key={`${id}-block_${index}`} />
+        ))}
+      </div>
+    );
   }
 );
 
