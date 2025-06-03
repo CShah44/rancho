@@ -18,7 +18,7 @@ interface MessageProps {
   message: MessageType;
 }
 
-// TODO RENDER MATH
+// TODO MAKE MATH RENDERING BETTER
 const Message = ({ message }: MessageProps) => {
   const [expandedPdf, setExpandedPdf] = useState<string | null>(null);
 
