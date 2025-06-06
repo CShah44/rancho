@@ -285,65 +285,11 @@ def combine_video_audio(video_path: str, audio_path: str, output_path: str = Non
         return output_path
         
     except FileNotFoundError:
-        # Fallback to MoviePy if FFmpeg is not available
-        return combine_video_audio_moviepy(video_path, audio_path, output_path)
+        raise Exception("FFmpeg not found. Please install FFmpeg.")
     except Exception as e:
-        # Try MoviePy fallback
-        try:
-            return combine_video_audio_moviepy(video_path, audio_path, output_path)
-        except:
-            raise Exception(f"Error combining video and audio: {str(e)}")
+        raise Exception(f"Error combining video and audio: {str(e)}")
 
-def combine_video_audio_moviepy(video_path: str, audio_path: str, output_path: str = None) -> str:
-    """Fallback method using MoviePy with correct API."""
-    try:
-        from moviepy import VideoFileClip, AudioFileClip, CompositeAudioClip
-        
-        if output_path is None:
-            output_path = os.path.join(tempfile.gettempdir(), f"final_video_{uuid.uuid4()}.mp4")
-        
-        # Load video and audio
-        video_clip = VideoFileClip(video_path)
-        audio_clip = AudioFileClip(audio_path)
-        
-        # Adjust audio duration to match video
-        if audio_clip.duration > video_clip.duration:
-            # Trim audio if it's longer than video
-            audio_clip = audio_clip.subclip(0, video_clip.duration)
-        elif audio_clip.duration < video_clip.duration:
-            # Loop audio if it's shorter than video
-            loops_needed = int(video_clip.duration / audio_clip.duration) + 1
-            # Create looped audio
-            audio_clips = [audio_clip] * loops_needed
-            looped_audio = CompositeAudioClip(audio_clips)
-            audio_clip = looped_audio.subclip(0, video_clip.duration)
-        
-        # Combine video with audio - CORRECT METHOD
-        final_video = video_clip.set_audio(audio_clip)
-        
-        # Write the final video
-        final_video.write_videofile(
-            output_path,
-            codec='libx264',
-            audio_codec='aac',
-            temp_audiofile=os.path.join(tempfile.gettempdir(), f'temp-audio-{uuid.uuid4()}.m4a'),
-            remove_temp=True,
-            verbose=False,
-            logger=None
-        )
-        
-        # Clean up
-        video_clip.close()
-        audio_clip.close()
-        final_video.close()
-        
-        return output_path
-        
-    except ImportError:
-        raise Exception("moviepy package not installed. Run: pip install moviepy")
-    except Exception as e:
-        raise Exception(f"MoviePy error: {str(e)}")
-
+# Remove the combine_video_audio_moviepy function entirely
 def get_voice_mapping(voice_type: str, speech_speed: float = 1.0):
     """Get appropriate voice settings for different TTS services."""
     edge_voices = {
