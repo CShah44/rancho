@@ -13,9 +13,6 @@ import { generateTitleFromUserMessage } from "./actions";
 import { getMostRecentUserMessage, getTrailingMessageId } from "@/lib/utils";
 import { generateP5Code } from "@/app/game/actions";
 
-// Allow streaming responses up to 60 seconds for video generation
-export const maxDuration = 180;
-
 export async function POST(req: Request) {
   try {
     const { messages, search, id } = await req.json();
