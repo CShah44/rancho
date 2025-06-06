@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-# Install system dependencies for Manim and other requirements
+# Install system dependencies for Manim including LaTeX
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libcairo2-dev \
@@ -16,6 +16,14 @@ RUN apt-get update && apt-get install -y \
     libespeak-dev \
     festival \
     festvox-kallpc16k \
+    texlive \
+    texlive-latex-extra \
+    texlive-fonts-extra \
+    texlive-latex-recommended \
+    texlive-science \
+    texlive-fonts-recommended \
+    dvipng \
+    dvisvgm \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
