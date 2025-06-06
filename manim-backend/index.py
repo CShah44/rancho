@@ -42,8 +42,49 @@ def read_root():
 def generate_audio_script_from_video(video_path: str, description: str) -> tuple[str, str]:
     """Generate a script for audio narration based on the rendered video."""
     try:
-        # Upload video to Gemini
+        # Check if video file exists and is readable
+        if not os.path.exists(video_path):
+            raise Exception(f"Video file not found: {video_path}")
+        
+        if os.path.getsize(video_path) == 0:
+            raise Exception("Video file is empty")
+        
+        print(f"Uploading video file: {video_path} (size: {os.path.getsize(video_path)} bytes)")
+        
+        # Upload video to Gemini with proper error handling
         uploaded_file = client.files.upload(file=video_path)
+        
+        print(f"File uploaded successfully: {uploaded_file.name}")
+        
+        # Wait for the file to be processed and become active
+        import time
+        max_wait_time = 30  # Maximum wait time in seconds
+        wait_interval = 2   # Check every 2 seconds
+        elapsed_time = 0
+        
+        while elapsed_time < max_wait_time:
+            try:
+                # Get file status
+                file_info = client.files.get(name=uploaded_file.name)
+                print(f"File state: {file_info.state}")
+                
+                if file_info.state.name == "ACTIVE":
+                    print("File is now active and ready for use")
+                    break
+                elif file_info.state.name == "FAILED":
+                    raise Exception(f"File processing failed: {file_info.state}")
+                
+                print(f"Waiting for file to become active... ({elapsed_time}s elapsed)")
+                time.sleep(wait_interval)
+                elapsed_time += wait_interval
+                
+            except Exception as status_error:
+                print(f"Error checking file status: {status_error}")
+                time.sleep(wait_interval)
+                elapsed_time += wait_interval
+        
+        if elapsed_time >= max_wait_time:
+            raise Exception("Timeout waiting for file to become active")
         
         prompt = f"""
         Analyze this educational animation video and create a clear, engaging audio script for narration.
@@ -63,24 +104,54 @@ def generate_audio_script_from_video(video_path: str, description: str) -> tuple
         Return only the script text without any formatting or metadata.
         """
 
+        print("Generating content with Gemini...")
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=[uploaded_file, prompt]
         )
         
+        if not response or not response.text:
+            raise Exception("Empty response from Gemini")
+        
         script = response.text.strip()
         file_name = uploaded_file.name
+        
+        print(f"Successfully generated audio script (length: {len(script)} characters)")
         
         return script, file_name
         
     except Exception as e:
-        raise Exception(f"Error generating audio script from video: {str(e)}")
+        error_msg = str(e)
+        print(f"Error in generate_audio_script_from_video: {error_msg}")
+        
+        # Clean up the uploaded file if it exists
+        if 'uploaded_file' in locals() and uploaded_file:
+            try:
+                client.files.delete(name=uploaded_file.name)
+                print(f"Cleaned up failed upload: {uploaded_file.name}")
+            except:
+                pass
+        
+        raise Exception(f"Error generating audio script from video: {error_msg}")
 
 def cleanup_gemini_file(file_name: str):
-    """Clean up uploaded file from Gemini."""
+    """Clean up uploaded file from Gemini with better error handling."""
+    if not file_name:
+        return
+        
     try:
+        # Check if file exists before trying to delete
+        try:
+            file_info = client.files.get(name=file_name)
+            print(f"File {file_name} exists, attempting to delete...")
+        except Exception:
+            print(f"File {file_name} not found, skipping deletion")
+            return
+        
+        # Delete the file
         client.files.delete(name=file_name)
         print(f"Successfully deleted Gemini file: {file_name}")
+        
     except Exception as e:
         print(f"Warning: Could not delete Gemini file {file_name}: {str(e)}")
 
@@ -372,9 +443,15 @@ async def explain_concept(request: ConceptRequest):
             
             # Generate audio script based on the rendered video
             try:
+                print(f"Attempting to generate audio script for video: {video_path}")
                 audio_script, gemini_file_name = generate_audio_script_from_video(video_path, request.description)
+                print("Audio script generated successfully")
             except Exception as e:
                 print(f"Warning: Could not generate audio script from video: {str(e)}")
+                # Clean up any uploaded file
+                if gemini_file_name:
+                    cleanup_gemini_file(gemini_file_name)
+                    gemini_file_name = None
                 # Fallback to a basic script based on the concept
                 audio_script = f"This animation explains the concept of {request.description}. Let's explore this educational topic step by step through visual demonstration."
             
@@ -431,9 +508,10 @@ async def explain_concept(request: ConceptRequest):
                 except:
                     pass
             
-            # Clean up Gemini uploaded file
+            # Clean up Gemini uploaded file at the end
             if gemini_file_name:
                 cleanup_gemini_file(gemini_file_name)
+                gemini_file_name = None
             
             # Return the response
             response_data = {
@@ -478,9 +556,9 @@ async def explain_concept(request: ConceptRequest):
             
             # Wait before retrying
             if attempt < max_attempts:
-                time.sleep(1)
+                time.sleep(2)  # Increased wait time between retries
     
-    # If all attempts failed, make sure to clean up any remaining Gemini files
+    # Final cleanup
     if gemini_file_name:
         cleanup_gemini_file(gemini_file_name)
     
@@ -574,7 +652,7 @@ def generate_game_code(concept, difficulty, game_type, instructions):
         3. Structure the code with an async main() function
         4. Use the following template structure:
         
-        ```python
+        
         import asyncio
         import pygame
         import math
@@ -625,7 +703,7 @@ def generate_game_code(concept, difficulty, game_type, instructions):
             pygame.quit()
             
         asyncio.run(main())
-        ```
+        
         
         Do not reference any external files or images. Use simple shapes and colors.
         The game should be educational, teaching the concept of {concept} through interactive gameplay.
