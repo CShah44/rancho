@@ -52,7 +52,10 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                 background-color: #121212; 
               }
               canvas { 
-                display: block; 
+                display: block;
+                max-width: 100vw;
+                max-height: 100vh;
+                object-fit: contain;
               }
               .console { 
                 position: absolute; 
@@ -70,6 +73,8 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
           <script src="${p5jsCdnUrl}"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/addons/p5.sound.min.js"></script>
           <script>
+            let isInFullscreen = false;
+            
             // Signal when the sketch is ready
             window.addEventListener('load', function() {
               parent.postMessage(JSON.stringify({ type: 'sketchLoaded' }), "*");
@@ -86,7 +91,12 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                   console.log('Sketch resumed (loop)'); 
                 }
                 else if (event.data === 'fullscreen') {
+                  isInFullscreen = true;
                   console.log('Fullscreen mode activated');
+                  // Remove interaction blocker
+                  const overlay = document.querySelector('.non-fullscreen-overlay');
+                  if (overlay) overlay.remove();
+                  
                   if (typeof windowResized === 'function') {
                     windowResized();
                   } else {
@@ -101,22 +111,55 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                   }
                 }
                 else if (event.data === 'exitFullscreen') {
+                  isInFullscreen = false;
                   console.log('Exited fullscreen mode');
+                  // Add interaction blocker back
+                  addNonFullscreenOverlay();
+                  
                   if (typeof windowResized === 'function') {
                     windowResized();
                   }
                 }
             }, false);
             
+            // Add overlay to block interactions when not in fullscreen
+            function addNonFullscreenOverlay() {
+              if (!document.querySelector('.non-fullscreen-overlay')) {
+                const overlay = document.createElement('div');
+                overlay.className = 'non-fullscreen-overlay';
+                document.body.appendChild(overlay);
+              }
+            }
+            
             // Add windowResized function if it doesn't exist in the sketch
             if (typeof window.windowResized !== 'function') {
               window.windowResized = function() {
                 if (typeof resizeCanvas === 'function' && typeof width !== 'undefined' && typeof height !== 'undefined') {
-                  resizeCanvas(windowWidth, windowHeight);
+                  if (isInFullscreen) {
+                    resizeCanvas(windowWidth, windowHeight);
+                  } else {
+                    // Maintain aspect ratio for non-fullscreen
+                    const aspectRatio = width / height;
+                    let newWidth = windowWidth;
+                    let newHeight = windowHeight;
+                    
+                    if (windowWidth / windowHeight > aspectRatio) {
+                      newWidth = windowHeight * aspectRatio;
+                    } else {
+                      newHeight = windowWidth / aspectRatio;
+                    }
+                    
+                    resizeCanvas(newWidth, newHeight);
+                  }
                   console.log('Canvas resized to window dimensions');
                 }
               };
             }
+            
+            // Initially add overlay to block interactions
+            window.addEventListener('DOMContentLoaded', function() {
+              addNonFullscreenOverlay();
+            });
             
             // Handle errors
             window.onerror = function(message, source, lineno, colno, error) {
@@ -230,6 +273,7 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
 
   const toggleFullscreen = () => {
     if (containerRef.current) {
+      handleReloadCode();
       if (!document.fullscreenElement) {
         containerRef.current.requestFullscreen().catch((err) => {
           console.error(
@@ -261,6 +305,25 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-zinc-300">Loading sketch...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Non-fullscreen interaction blocker */}
+        {!isFullscreen && !isLoading && (
+          <div className="absolute inset-0 bg-black flex items-center justify-center z-20">
+            <div className="text-center p-6 bg-zinc-800/90 rounded-lg backdrop-blur-sm">
+              <Maximize size={48} className="text-white mx-auto mb-4" />
+              <h4 className="text-white font-medium mb-2">Interactive Mode</h4>
+              <p className="text-zinc-300 text-sm mb-4">
+                Click fullscreen to play and interact with this sketch
+              </p>
+              <button
+                onClick={toggleFullscreen}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors"
+              >
+                Enter Fullscreen
+              </button>
             </div>
           </div>
         )}
