@@ -9,6 +9,7 @@ import {
   SkipBack,
   SkipForward,
   Download,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MemoizedMarkdown } from "./memoized-markdown";
@@ -29,6 +30,7 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
+  const [volume, setVolume] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -50,6 +52,20 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
       setIsMuted(!isMuted);
+    }
+  };
+
+  // Handle volume change
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+      if (newVolume === 0) {
+        setIsMuted(true);
+      } else if (isMuted) {
+        setIsMuted(false);
+      }
     }
   };
 
@@ -102,12 +118,10 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
   const handleMouseMove = () => {
     setShowControls(true);
 
-    // Clear any existing timeout
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
 
-    // Set a new timeout to hide controls after 3 seconds
     controlsTimeoutRef.current = setTimeout(() => {
       if (isPlaying) {
         setShowControls(false);
@@ -120,7 +134,6 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
     setIsFullscreen(!!document.fullscreenElement);
   };
 
-  // Add event listener for fullscreen change
   useEffect(() => {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
 
@@ -153,12 +166,9 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
 
   const handleDownload = () => {
     if (video.videoUrl) {
-      // Create an anchor element
       const a = document.createElement("a");
       a.href = video.videoUrl;
-      // Set the download attribute with the video title or a default name
       a.download = video.title || "video";
-      // Append to the body, click it, and remove it
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -166,17 +176,42 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
   };
 
   return (
-    <div className="my-4 rounded-lg overflow-hidden bg-zinc-900 shadow-lg">
+    <div className="my-4 sm:my-6 rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 shadow-2xl border border-zinc-700/50">
+      {/* Enhanced Header */}
+      <div className="p-4 sm:p-6 bg-gradient-to-r from-zinc-800/80 to-zinc-700/80 backdrop-blur-sm border-b border-zinc-700/50">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+            <Video size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white text-base sm:text-lg">
+              {video.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-400">
+              Educational Animation
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div
         ref={containerRef}
-        className={cn("relative group", isFullscreen ? "bg-black" : "")}
+        className={cn(
+          "relative group bg-black",
+          isFullscreen
+            ? "bg-black"
+            : "rounded-b-2xl sm:rounded-b-3xl overflow-hidden"
+        )}
         onMouseMove={handleMouseMove}
       >
-        {/* Video element remains the same */}
+        {/* Video element */}
         <video
           ref={videoRef}
           src={video.videoUrl}
-          className="w-full rounded-lg"
+          className={cn(
+            "w-full object-contain bg-black",
+            isFullscreen ? "h-screen" : "h-[250px] sm:h-[350px] lg:h-[450px]"
+          )}
           onTimeUpdate={handleTimeUpdate}
           onDurationChange={handleDurationChange}
           onPlay={() => setIsPlaying(true)}
@@ -186,28 +221,30 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
           playsInline
         />
 
-        {/* Video Title Overlay remains the same */}
+        {/* Enhanced Video Title Overlay */}
         <div
           className={cn(
-            "absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent text-white transition-opacity duration-300",
+            "absolute top-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-b from-black/80 via-black/40 to-transparent text-white transition-opacity duration-300",
             showControls ? "opacity-100" : "opacity-0"
           )}
         >
-          <h3 className="font-medium truncate">{video.title}</h3>
+          <h3 className="font-semibold truncate text-sm sm:text-base">
+            {video.title}
+          </h3>
         </div>
 
-        {/* Video Controls */}
+        {/* Enhanced Video Controls */}
         <div
           className={cn(
-            "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 transition-opacity duration-300",
+            "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 sm:p-4 transition-opacity duration-300",
             showControls ? "opacity-100" : "opacity-0"
           )}
         >
-          {/* Progress bar remains the same */}
-          <div className="flex items-center mb-2 relative h-2">
-            <div className="absolute inset-0 bg-zinc-600 rounded-full h-1 top-[50%] -translate-y-[50%]"></div>
+          {/* Enhanced Progress bar */}
+          <div className="flex items-center mb-3 sm:mb-4 relative h-2">
+            <div className="absolute inset-0 bg-white/20 rounded-full h-1 top-[50%] -translate-y-[50%]"></div>
             <div
-              className="absolute left-0 bg-blue-500 rounded-full h-1 top-[50%] -translate-y-[50%]"
+              className="absolute left-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full h-1 top-[50%] -translate-y-[50%] transition-all duration-150"
               style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
             ></div>
             <input
@@ -216,114 +253,141 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
               max={duration || 0}
               value={currentTime}
               onChange={handleSeek}
-              className="w-full h-1 absolute inset-0 opacity-0 cursor-pointer"
+              className="w-full h-2 absolute inset-0 opacity-0 cursor-pointer"
             />
           </div>
 
-          {/* Controls */}
+          {/* Enhanced Controls */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              {/* Play/Pause button remains the same */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Play/Pause button */}
               <button
                 onClick={togglePlay}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
-                  <Pause size={18} className="text-white" />
+                  <Pause size={16} className="text-white" />
                 ) : (
-                  <Play size={18} className="text-white" />
+                  <Play size={16} className="text-white" />
                 )}
               </button>
 
-              {/* Skip backward remains the same */}
+              {/* Skip backward */}
               <button
                 onClick={skipBackward}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
                 aria-label="Skip backward 10 seconds"
               >
-                <SkipBack size={18} className="text-white" />
+                <SkipBack size={16} className="text-white" />
               </button>
 
-              {/* Skip forward remains the same */}
+              {/* Skip forward */}
               <button
                 onClick={skipForward}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
                 aria-label="Skip forward 10 seconds"
               >
-                <SkipForward size={18} className="text-white" />
+                <SkipForward size={16} className="text-white" />
               </button>
 
-              {/* Volume button remains the same */}
-              <button
-                onClick={toggleMute}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
-                aria-label={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? (
-                  <VolumeX size={18} className="text-white" />
-                ) : (
-                  <Volume2 size={18} className="text-white" />
-                )}
-              </button>
+              {/* Volume controls */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={toggleMute}
+                  className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? (
+                    <VolumeX size={16} className="text-white" />
+                  ) : (
+                    <Volume2 size={16} className="text-white" />
+                  )}
+                </button>
 
-              {/* Time display remains the same */}
-              <div className="text-xs text-white">
+                {/* Volume slider - hidden on mobile */}
+                <div className="hidden sm:flex items-center">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={volume}
+                    onChange={handleVolumeChange}
+                    className="w-16 h-1 bg-white/20 rounded-full appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
+                        volume * 100
+                      }%, rgba(255,255,255,0.2) ${
+                        volume * 100
+                      }%, rgba(255,255,255,0.2) 100%)`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Time display */}
+              <div className="text-xs sm:text-sm text-white font-mono bg-black/30 px-2 py-1 rounded backdrop-blur-sm">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              {/* Download button - NEW */}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              {/* Download button */}
               <button
                 onClick={handleDownload}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
                 aria-label="Download video"
               >
-                <Download size={18} className="text-white" />
+                <Download size={16} className="text-white" />
               </button>
 
-              {/* Fullscreen button remains the same */}
+              {/* Fullscreen button */}
               <button
                 onClick={toggleFullscreen}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
                 aria-label={
                   isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
                 }
               >
                 {isFullscreen ? (
-                  <Minimize size={18} className="text-white" />
+                  <Minimize size={16} className="text-white" />
                 ) : (
-                  <Maximize size={18} className="text-white" />
+                  <Maximize size={16} className="text-white" />
                 )}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Play button overlay remains the same */}
+        {/* Enhanced Play button overlay */}
         {!isPlaying && (
           <div className="absolute inset-0 flex items-center justify-center">
             <button
               onClick={togglePlay}
-              className="p-4 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              className="p-4 sm:p-6 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 border border-white/30 transform hover:scale-110"
               aria-label="Play"
             >
-              <Play size={32} className="text-white" />
+              <Play size={24} className="text-white ml-1" />
             </button>
           </div>
         )}
       </div>
 
-      <div className="p-4 bg-zinc-800 text-white border-t border-zinc-700">
-        <h4 className="font-medium mb-2">About this video</h4>
-        <div className="text-sm text-zinc-300">
-          <MemoizedMarkdown
-            id={id + "-video-explanation"}
-            content={video.explanation}
-          />
+      {/* Enhanced Info section */}
+      {!isFullscreen && (
+        <div className="p-4 sm:p-6 bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 backdrop-blur-sm border-t border-zinc-700/50">
+          <h4 className="font-semibold mb-3 text-white text-sm sm:text-base">
+            About this Video
+          </h4>
+          <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed prose prose-sm prose-invert max-w-none">
+            <MemoizedMarkdown
+              id={id + "-video-explanation"}
+              content={video.explanation}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

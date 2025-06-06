@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Play, Pause, RefreshCw, Maximize, Minimize } from "lucide-react";
+import {
+  Play,
+  Pause,
+  RefreshCw,
+  Maximize,
+  Minimize,
+  Gamepad2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GameToolResult {
@@ -49,25 +56,31 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                 align-items: center; 
                 height: 100vh; 
                 width: 100vw;
-                background-color: #121212; 
+                background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
               }
               canvas { 
                 display: block;
                 max-width: 100vw;
                 max-height: 100vh;
                 object-fit: contain;
+                border-radius: 8px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
               }
               .console { 
                 position: absolute; 
                 bottom: 0; 
                 left: 0; 
                 width: 100%; 
-                background: rgba(0, 0, 0, 0.7); 
-                padding: 1em; 
+                background: rgba(239, 68, 68, 0.9);
+                backdrop-filter: blur(8px);
+                padding: 1rem; 
                 margin: 0; 
-                color: red; 
-                font-family: monospace; 
+                color: white; 
+                font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; 
                 white-space: pre-wrap; 
+                font-size: 14px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
               }
           </style>
           <script src="${p5jsCdnUrl}"></script>
@@ -75,32 +88,25 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
           <script>
             let isInFullscreen = false;
             
-            // Signal when the sketch is ready
             window.addEventListener('load', function() {
               parent.postMessage(JSON.stringify({ type: 'sketchLoaded' }), "*");
             });
             
-            // Listen for messages from parent
             window.addEventListener('message', (event) => {
                 if (event.data === 'stop' && typeof noLoop === 'function') { 
                   noLoop(); 
-                  console.log('Sketch stopped (noLoop)'); 
                 }
                 else if (event.data === 'resume' && typeof loop === 'function') { 
                   loop(); 
-                  console.log('Sketch resumed (loop)'); 
                 }
                 else if (event.data === 'fullscreen') {
                   isInFullscreen = true;
-                  console.log('Fullscreen mode activated');
-                  // Remove interaction blocker
                   const overlay = document.querySelector('.non-fullscreen-overlay');
                   if (overlay) overlay.remove();
                   
                   if (typeof windowResized === 'function') {
                     windowResized();
                   } else {
-                    // If windowResized is not defined, try to resize the canvas
                     try {
                       if (typeof resizeCanvas === 'function') {
                         resizeCanvas(window.innerWidth, window.innerHeight);
@@ -112,8 +118,6 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                 }
                 else if (event.data === 'exitFullscreen') {
                   isInFullscreen = false;
-                  console.log('Exited fullscreen mode');
-                  // Add interaction blocker back
                   addNonFullscreenOverlay();
                   
                   if (typeof windowResized === 'function') {
@@ -122,7 +126,6 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                 }
             }, false);
             
-            // Add overlay to block interactions when not in fullscreen
             function addNonFullscreenOverlay() {
               if (!document.querySelector('.non-fullscreen-overlay')) {
                 const overlay = document.createElement('div');
@@ -131,14 +134,12 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
               }
             }
             
-            // Add windowResized function if it doesn't exist in the sketch
             if (typeof window.windowResized !== 'function') {
               window.windowResized = function() {
                 if (typeof resizeCanvas === 'function' && typeof width !== 'undefined' && typeof height !== 'undefined') {
                   if (isInFullscreen) {
                     resizeCanvas(windowWidth, windowHeight);
                   } else {
-                    // Maintain aspect ratio for non-fullscreen
                     const aspectRatio = width / height;
                     let newWidth = windowWidth;
                     let newHeight = windowHeight;
@@ -151,17 +152,14 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
                     
                     resizeCanvas(newWidth, newHeight);
                   }
-                  console.log('Canvas resized to window dimensions');
                 }
               };
             }
             
-            // Initially add overlay to block interactions
             window.addEventListener('DOMContentLoaded', function() {
               addNonFullscreenOverlay();
             });
             
-            // Handle errors
             window.onerror = function(message, source, lineno, colno, error) {
               const errorMessage = error ? error.toString() : message;
               parent.postMessage(JSON.stringify({ type: 'runtimeError', message: errorMessage }), "*");
@@ -198,7 +196,7 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
     runCode(game.code);
   }, [game.code, runCode]);
 
-  // Handle iframe messages (errors and loading)
+  // Handle iframe messages
   const handleIframeMessage = useCallback((event: MessageEvent) => {
     if (event.source !== iframeRef.current?.contentWindow) return;
     if (event.data && typeof event.data === "string") {
@@ -213,7 +211,6 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
           setIsLoading(false);
         }
       } catch (e) {
-        // Non-JSON message from iframe or parse error
         console.error("Error parsing message:", e);
       }
     }
@@ -224,11 +221,11 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
     return () => window.removeEventListener("message", handleIframeMessage);
   }, [handleIframeMessage]);
 
-  // Set a timeout to hide the loading state even if no message is received
+  // Set a timeout to hide the loading state
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 5000); // 5 seconds timeout
+    }, 5000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -238,7 +235,6 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
     const isNowFullscreen = !!document.fullscreenElement;
     setIsFullscreen(isNowFullscreen);
 
-    // Notify the iframe about fullscreen change
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         isNowFullscreen ? "fullscreen" : "exitFullscreen",
@@ -287,9 +283,22 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
   };
 
   return (
-    <div className="my-4 rounded-lg overflow-hidden bg-zinc-900 shadow-lg">
-      <div className="p-3 bg-zinc-800 border-b border-zinc-700">
-        <h3 className="font-medium text-white">{game.title}</h3>
+    <div className="my-4 sm:my-6 rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 shadow-2xl border border-zinc-700/50">
+      {/* Enhanced Header */}
+      <div className="p-4 sm:p-6 bg-gradient-to-r from-zinc-800/80 to-zinc-700/80 backdrop-blur-sm border-b border-zinc-700/50">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+            <Gamepad2 size={18} className="text-white" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white text-base sm:text-lg">
+              {game.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-400">
+              Interactive Learning Game
+            </p>
+          </div>
+        </div>
       </div>
 
       <div
@@ -299,30 +308,45 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
           isFullscreen ? "bg-black fixed inset-0 z-50" : ""
         )}
       >
-        {/* Loading overlay */}
+        {/* Enhanced Loading overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-zinc-900 flex items-center justify-center z-30">
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-zinc-300">Loading sketch...</p>
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 flex items-center justify-center z-30">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 w-12 h-12 sm:w-16 sm:h-16 border-4 border-pink-500/20 border-b-pink-500 rounded-full animate-spin animate-reverse"></div>
+              </div>
+              <div className="text-center">
+                <p className="text-white font-medium text-sm sm:text-base">
+                  Loading Game...
+                </p>
+                <p className="text-zinc-400 text-xs sm:text-sm mt-1">
+                  Preparing your interactive experience
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Non-fullscreen interaction blocker */}
+        {/* Enhanced Non-fullscreen interaction blocker */}
         {!isFullscreen && !isLoading && (
-          <div className="absolute inset-0 bg-black flex items-center justify-center z-20">
-            <div className="text-center p-6 bg-zinc-800/90 rounded-lg backdrop-blur-sm">
-              <Maximize size={48} className="text-white mx-auto mb-4" />
-              <h4 className="text-white font-medium mb-2">Interactive Mode</h4>
-              <p className="text-zinc-300 text-sm mb-4">
-                Click fullscreen to play and interact with this sketch
+          <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-black/80 backdrop-blur-sm flex items-center justify-center z-20">
+            <div className="text-center p-6 sm:p-8 bg-zinc-800/90 rounded-2xl backdrop-blur-md border border-zinc-700/50 shadow-2xl max-w-sm mx-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Maximize size={24} className="text-white" />
+              </div>
+              <h4 className="text-white font-semibold mb-2 text-lg sm:text-xl">
+                Ready to Play?
+              </h4>
+              <p className="text-zinc-300 text-sm sm:text-base mb-6 leading-relaxed">
+                Enter fullscreen mode to start playing and interacting with this
+                educational game
               </p>
               <button
                 onClick={toggleFullscreen}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors"
+                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-purple-500/25 transform hover:scale-105"
               >
-                Enter Fullscreen
+                Start Game
               </button>
             </div>
           </div>
@@ -333,91 +357,93 @@ const GameTool = ({ game }: { game: GameToolResult }) => {
           ref={iframeRef}
           className={cn(
             "w-full border-0",
-            isFullscreen ? "h-screen" : "h-[400px]"
+            isFullscreen ? "h-screen" : "h-[300px] sm:h-[400px] lg:h-[500px]"
           )}
-          title={`p5.js - ${game.title}`}
+          title={`Interactive Game - ${game.title}`}
           sandbox="allow-scripts allow-same-origin"
         ></iframe>
 
-        {/* Controls Overlay */}
+        {/* Enhanced Controls Overlay */}
         <div
           className={cn(
-            "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 transition-opacity duration-300",
+            "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 sm:p-4 transition-opacity duration-300",
             "opacity-100 z-10"
           )}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               {/* Play/Pause button */}
               <button
                 onClick={isPlaying ? handleStop : handlePlay}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
                 aria-label={isPlaying ? "Pause" : "Play"}
                 disabled={isLoading}
               >
                 {isPlaying ? (
-                  <Pause size={18} className="text-white" />
+                  <Pause size={16} className="text-white" />
                 ) : (
-                  <Play size={18} className="text-white" />
+                  <Play size={16} className="text-white" />
                 )}
               </button>
 
               {/* Reload button */}
               <button
                 onClick={handleReloadCode}
-                className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
-                aria-label="Reload sketch"
+                className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
+                aria-label="Reload game"
                 disabled={isLoading}
               >
-                <RefreshCw size={18} className="text-white" />
+                <RefreshCw size={16} className="text-white" />
               </button>
             </div>
 
             {/* Fullscreen button */}
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+              className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-200 border border-white/20"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               disabled={isLoading}
             >
               {isFullscreen ? (
-                <Minimize size={18} className="text-white" />
+                <Minimize size={16} className="text-white" />
               ) : (
-                <Maximize size={18} className="text-white" />
+                <Maximize size={16} className="text-white" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Error display */}
+        {/* Enhanced Error display */}
         {error && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-20 p-4">
-            <div className="bg-red-900/50 p-4 rounded-md max-w-full max-h-full overflow-auto">
-              <h4 className="text-red-300 font-medium mb-2">
-                Error in sketch:
+          <div className="absolute inset-0 bg-gradient-to-br from-red-900/80 via-red-800/60 to-red-900/80 backdrop-blur-sm flex items-center justify-center z-20 p-4">
+            <div className="bg-red-900/50 p-4 sm:p-6 rounded-2xl max-w-md mx-4 border border-red-500/30 backdrop-blur-md">
+              <h4 className="text-red-300 font-semibold mb-3 text-lg">
+                Game Error
               </h4>
-              <pre className="text-red-100 text-sm whitespace-pre-wrap">
+              <pre className="text-red-100 text-xs sm:text-sm whitespace-pre-wrap mb-4 bg-red-950/50 p-3 rounded-lg border border-red-500/20">
                 {error}
               </pre>
               <button
                 onClick={handleReloadCode}
-                className="mt-4 px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded-md text-sm"
+                className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200"
               >
-                Reload Sketch
+                Restart Game
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Info section - Hide in fullscreen mode */}
+      {/* Enhanced Info section */}
       {!isFullscreen && (
-        <div className="p-4 bg-zinc-800 text-white border-t border-zinc-700">
-          <h4 className="font-medium mb-2">About this interactive sketch</h4>
-          <div className="text-sm text-zinc-300">
+        <div className="p-4 sm:p-6 bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 backdrop-blur-sm border-t border-zinc-700/50">
+          <h4 className="font-semibold mb-3 text-white text-sm sm:text-base">
+            About this Game
+          </h4>
+          <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
             <p>
               {game.info ||
-                `This is an interactive demonstration of ${game.topic}.`}
+                `This is an interactive educational game about ${game.topic}. Click "Start Game" above to play in fullscreen mode.`}
             </p>
           </div>
         </div>
