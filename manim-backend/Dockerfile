@@ -1,5 +1,6 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
+# Install system dependencies for Manim and other requirements
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libcairo2-dev \
@@ -13,13 +14,27 @@ RUN apt-get update && apt-get install -y \
     espeak-data \
     libespeak1 \
     libespeak-dev \
+    festival \
+    festvox-kallpc16k \
     && rm -rf /var/lib/apt/lists/*
 
+# Set working directory
 WORKDIR /app
+
+# Copy requirements first for better caching
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
 COPY . .
+
+# Create necessary directories
 RUN mkdir -p /tmp/manim_temp
 
+# Expose port
 EXPOSE 8000
-CMD ["uvicorn", "index:app", "--host", "0.0.0.0", "--port", "$PORT"]
+
+# Use a startup script to handle PORT variable
+CMD ["sh", "-c", "uvicorn index:app --host 0.0.0.0 --port ${PORT:-8000}"]
