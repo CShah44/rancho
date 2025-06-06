@@ -39,29 +39,50 @@ class ConceptRequest(BaseModel):
 def read_root():
     return {"Hello": "World"}
 
-def generate_audio_script(concept: str, video_duration: float = 50.0) -> str:
-    """Generate a script for audio narration based on the concept."""
-    prompt = f"""
-    Create a clear, engaging audio script for educational narration about: {concept}
-    
-    Requirements:
-    - The script should be approximately {int(video_duration)} seconds when spoken at normal pace
-    - Use simple, clear language appropriate for students
-    - Include natural pauses and transitions
-    - Make it engaging and educational
-    - Avoid technical jargon unless necessary
-    - Structure it to complement a visual animation
-    - Include timing cues like [PAUSE] where appropriate
-    
-    Return only the script text without any formatting or metadata.
-    """
-    
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", 
-        contents=prompt
-    )
-    
-    return response.text.strip()
+def generate_audio_script_from_video(video_path: str, description: str) -> tuple[str, str]:
+    """Generate a script for audio narration based on the rendered video."""
+    try:
+        # Upload video to Gemini
+        uploaded_file = client.files.upload(file=video_path)
+        
+        prompt = f"""
+        Analyze this educational animation video and create a clear, engaging audio script for narration.
+        The animation was created on the basis of the following concept: {description}.
+
+        Requirements:
+        - Watch the video carefully and understand the visual elements, transitions, and educational content
+        - Create a script that complements and explains what's happening visually
+        - The script timing should match the video duration
+        - Use simple, clear language appropriate for students
+        - Include natural pauses and transitions that align with visual changes
+        - Make it engaging and educational
+        - Avoid technical jargon unless necessary
+        - The narration should enhance understanding of the visual content
+        - The script should be as concise as possible
+        
+        Return only the script text without any formatting or metadata.
+        """
+
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[uploaded_file, prompt]
+        )
+        
+        script = response.text.strip()
+        file_name = uploaded_file.name
+        
+        return script, file_name
+        
+    except Exception as e:
+        raise Exception(f"Error generating audio script from video: {str(e)}")
+
+def cleanup_gemini_file(file_name: str):
+    """Clean up uploaded file from Gemini."""
+    try:
+        client.files.delete(name=file_name)
+        print(f"Successfully deleted Gemini file: {file_name}")
+    except Exception as e:
+        print(f"Warning: Could not delete Gemini file {file_name}: {str(e)}")
 
 async def generate_audio_with_edge_tts_async(text: str, voice: str = "en-US-AriaNeural", output_path: str = None) -> str:
     """Generate audio using Edge TTS (free Microsoft service) - async version."""
@@ -253,9 +274,10 @@ def get_voice_mapping(voice_type: str, speech_speed: float = 1.0):
 
 @app.post("/explain-concept")
 async def explain_concept(request: ConceptRequest):
-    max_attempts = 3
+    max_attempts = 4
     attempt = 0
     last_error = None
+    gemini_file_name = None
     
     while attempt < max_attempts:
         attempt += 1
@@ -288,13 +310,6 @@ async def explain_concept(request: ConceptRequest):
                 - Explain the educational value of specific visual elements
                 - Use clear, direct language without unnecessary jargon
                 
-                For the audio script:
-                - Create a natural, engaging narration script that complements the visual animation
-                - The script should be timed to match the 40-60 second animation
-                - Use educational language appropriate for students
-                - Include natural pauses and emphasis where needed
-                - Make it sound conversational yet informative
-                
                 DO NOT REFERENCE ANY EXTERNAL SVG OR IMAGE FILES.
                 Return only the Python code without any explanations or markdown.
             """
@@ -310,12 +325,9 @@ async def explain_concept(request: ConceptRequest):
                             },
                             "explanation": {
                                 "type": "string"
-                            },
-                            "audio_script": {
-                                "type": "string"
                             }
                         },
-                        "required": ["python_code", "explanation", "audio_script"]
+                        "required": ["python_code", "explanation"]
                     }
                 }
             )
@@ -325,12 +337,7 @@ async def explain_concept(request: ConceptRequest):
             # Extract the generated content
             python_code = json_response["python_code"]
             explanation = json_response["explanation"]
-            audio_script = json_response.get("audio_script", "")
             
-            # If no audio script was generated, create one
-            if not audio_script.strip():
-                audio_script = generate_audio_script(request.description)
-        
             # Create files in a directory outside the project structure
             temp_base_dir = os.path.join(os.path.expanduser("~"), "manim_temp")
             os.makedirs(temp_base_dir, exist_ok=True)
@@ -363,29 +370,29 @@ async def explain_concept(request: ConceptRequest):
 
             video_path = video_files[0]
             
-            # Generate audio narration
+            # Generate audio script based on the rendered video
+            try:
+                audio_script, gemini_file_name = generate_audio_script_from_video(video_path, request.description)
+            except Exception as e:
+                print(f"Warning: Could not generate audio script from video: {str(e)}")
+                # Fallback to a basic script based on the concept
+                audio_script = f"This animation explains the concept of {request.description}. Let's explore this educational topic step by step through visual demonstration."
+            
+            # Generate audio narration using pyttsx3
             voice_settings = get_voice_mapping(request.voice_type, request.speech_speed)
             audio_path = None
             audio_generation_errors = []
             
-            # Try different TTS services in order of preference
-            tts_methods = [
-                ("Edge TTS", lambda: generate_audio_with_edge_tts(
-                    audio_script, voice_settings["edge_voice"]
-                )),
-                ("pyttsx3", lambda: generate_audio_with_pyttsx3(
+            # Use pyttsx3 to generate audio
+            try:
+                audio_path = generate_audio_with_pyttsx3(
                     audio_script, request.voice_type, voice_settings["pyttsx3_rate"]
-                ))
-            ]
-            
-            for method_name, method_func in tts_methods:
-                try:
-                    audio_path = method_func()
-                    if audio_path and os.path.exists(audio_path):
-                        break
-                except Exception as e:
-                    audio_generation_errors.append(f"{method_name}: {str(e)}")
-                    continue
+                )
+                if not audio_path or not os.path.exists(audio_path):
+                    raise Exception("Audio file was not created")
+            except Exception as e:
+                audio_generation_errors.append(f"pyttsx3: {str(e)}")
+                print(f"Warning: Could not generate audio with pyttsx3: {str(e)}")
             
             if not audio_path:
                 print(f"Warning: Could not generate audio. Errors: {audio_generation_errors}")
@@ -424,6 +431,10 @@ async def explain_concept(request: ConceptRequest):
                 except:
                     pass
             
+            # Clean up Gemini uploaded file
+            if gemini_file_name:
+                cleanup_gemini_file(gemini_file_name)
+            
             # Return the response
             response_data = {
                 "video_url": upload_result["secure_url"],
@@ -441,6 +452,11 @@ async def explain_concept(request: ConceptRequest):
         except Exception as e:
             last_error = str(e)
             print(f"Attempt {attempt} failed: {last_error}")
+            
+            # Clean up Gemini file if it was uploaded in this attempt
+            if gemini_file_name:
+                cleanup_gemini_file(gemini_file_name)
+                gemini_file_name = None
             
             # Clean up any files that might have been created in this attempt
             cleanup_paths = []
@@ -464,7 +480,10 @@ async def explain_concept(request: ConceptRequest):
             if attempt < max_attempts:
                 time.sleep(1)
     
-    # If all attempts failed
+    # If all attempts failed, make sure to clean up any remaining Gemini files
+    if gemini_file_name:
+        cleanup_gemini_file(gemini_file_name)
+    
     raise HTTPException(status_code=500, detail=f"Failed after {max_attempts} attempts. Last error: {last_error}")
 
 # Rest of your existing code for video deletion and game generation...
@@ -475,7 +494,7 @@ class VideoRequest(BaseModel):
 async def delete_video(request: VideoRequest):
     video_url = request.video_url
     try:
-        match = re.search(r'upload/v\d+/(.+)\.\w+$', video_url)
+        match = re.search(r'upload/v\d+/(.+)\.\w+', video_url)
         if not match:
             raise HTTPException(status_code=400, detail="Invalid Cloudinary URL format")
         
