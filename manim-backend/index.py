@@ -203,36 +203,52 @@ def generate_audio_with_edge_tts(text: str, voice: str = "en-US-AriaNeural", out
         raise Exception(f"Error generating audio with Edge TTS: {str(e)}")
 
 def generate_audio_with_pyttsx3(text: str, voice_type: str = "male", rate: int = 200, output_path: str = None) -> str:
-    """Generate audio using pyttsx3 (offline, free)."""
+    """Generate audio using pyttsx3 (offline, free) with Linux compatibility."""
     try:
         import pyttsx3
         
         if output_path is None:
             output_path = os.path.join(tempfile.gettempdir(), f"audio_{uuid.uuid4()}.wav")
         
-        engine = pyttsx3.init()
+        # Initialize engine with error handling for Linux
+        try:
+            engine = pyttsx3.init('espeak')  # Use espeak driver on Linux
+        except:
+            try:
+                engine = pyttsx3.init()  # Fallback to default
+            except:
+                raise Exception("Could not initialize TTS engine")
         
         # Set speech rate
         engine.setProperty('rate', rate)
         
-        # Set voice based on preference
-        voices = engine.getProperty('voices')
-        if voices:
-            if voice_type.lower() == "female" and len(voices) > 1:
-                engine.setProperty('voice', voices[1].id)
-            else:
+        # Set voice based on preference (Linux has limited voice options)
+        try:
+            voices = engine.getProperty('voices')
+            if voices and len(voices) > 0:
+                # Use first available voice
                 engine.setProperty('voice', voices[0].id)
+        except:
+            pass  # Use default voice if voice setting fails
         
         # Set volume
-        engine.setProperty('volume', 0.9)
+        try:
+            engine.setProperty('volume', 0.9)
+        except:
+            pass  # Skip if volume setting fails
         
         # Save to file
         engine.save_to_file(text, output_path)
         engine.runAndWait()
         
+        # Check if file was created
+        if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            raise Exception("Audio file was not created or is empty")
+        
         return output_path
+        
     except ImportError:
-        raise Exception("pyttsx3 package not installed. Run: pip install pyttsx3")
+        raise Exception("pyttsx3 package not installed")
     except Exception as e:
         raise Exception(f"Error generating audio with pyttsx3: {str(e)}")
 
