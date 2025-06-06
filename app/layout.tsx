@@ -15,10 +15,12 @@ const inter = Inter({
 
 export const dmSans = DM_Sans({
   variable: "--font-secondary",
+  subsets: ["latin"],
 });
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-main",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
