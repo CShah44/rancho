@@ -107,7 +107,7 @@ export async function POST(req: Request) {
             try {
               // Call the FastAPI backend to generate the video
               const response = await fetch(
-                "http://localhost:8000/explain-concept",
+                `${process.env.BACKEND_URL}/explain-concept`,
                 {
                   method: "POST",
                   headers: {

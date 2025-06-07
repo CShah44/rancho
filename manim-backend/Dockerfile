@@ -13,7 +13,10 @@ RUN apt-get update && apt-get install -y \
     espeak-data \
     libespeak1 \
     libespeak-dev \
-    texlive-full \
+    texlive-latex-base \
+    texlive-latex-recommended \
+    texlive-fonts-recommended \
+    texlive-latex-extra \
     dvipng \
     dvisvgm \
     && rm -rf /var/lib/apt/lists/* \

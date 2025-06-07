@@ -76,7 +76,7 @@ export async function deleteChatById({ id }: { id: string }) {
             if (part.toolInvocation?.result?.videoUrl) {
               // Delete the video from the server, send request to your server to delete the video
               const response = await fetch(
-                "http://localhost:8000/delete-video",
+                `${process.env.BACKEND_URL}/delete-video`,
                 {
                   method: "DELETE",
                   headers: {
