@@ -32,9 +32,14 @@ export default function PureChatHeader() {
           <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center">
             <span className="text-black font-bold text-sm sm:text-base">R</span>
           </div>
-          <span className="text-white font-semibold text-sm sm:text-base tracking-wide">
-            Rancho
-          </span>
+          <div className="flex items-center space-x-1">
+            <span className="text-white font-semibold text-sm sm:text-base tracking-wide">
+              Rancho
+            </span>
+            <span className="text-xs bg-gradient-to-r from-blue-500 to-purple-500 text-white px-2 py-0.5 rounded-full font-medium">
+              BETA
+            </span>
+          </div>
         </div>
       </div>
 

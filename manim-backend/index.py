@@ -291,48 +291,9 @@ def get_voice_mapping(voice_type: str, speech_speed: float = 1.0):
         "pyttsx3_rate": pyttsx3_rate
     }
 
-def run_manim_with_timeout(script_path: str, media_dir: str, timeout: int = 300) -> subprocess.CompletedProcess:
-    """Run Manim with proper timeout and error handling."""
-    try:
-        result = subprocess.run(
-            ["manim", "-qm", "--media_dir", media_dir, script_path, "ExplainConcept"],
-            capture_output=True,
-            text=True,
-            cwd=os.path.dirname(script_path),
-            timeout=timeout
-        )
-        return result
-    except subprocess.TimeoutExpired:
-        raise Exception(f"Manim rendering timed out after {timeout} seconds")
-    except Exception as e:
-        raise Exception(f"Error running Manim: {str(e)}")
-
-def wait_for_video_file(video_dir: str, max_wait: int = 60) -> str:
-    """Wait for video file to be completely written."""
-    start_time = time.time()
-    
-    while time.time() - start_time < max_wait:
-        video_files = glob.glob(os.path.join(video_dir, "*.mp4"))
-        
-        if video_files:
-            video_path = video_files[0]
-            
-            # Check if file is still being written
-            initial_size = os.path.getsize(video_path)
-            time.sleep(2)  # Wait 2 seconds
-            final_size = os.path.getsize(video_path)
-            
-            if initial_size == final_size and final_size > 1000:  # File is stable and not tiny
-                print(f"Video file ready: {video_path} ({final_size} bytes)")
-                return video_path
-        
-        time.sleep(1)
-    
-    raise Exception("Video file was not generated within timeout period")
-
 @app.post("/explain-concept")
 async def explain_concept(request: ConceptRequest):
-    max_attempts = 3  # Reduced attempts but better error handling
+    max_attempts = 3
     attempt = 0
     last_error = None
     gemini_file_name = None
@@ -340,9 +301,10 @@ async def explain_concept(request: ConceptRequest):
     while attempt < max_attempts:
         attempt += 1
         try:
+            # Generate a unique ID for this request
             request_id = str(uuid.uuid4())
             
-            # Enhanced prompt with better duration control
+            # Enhanced prompt with better timing control
             prompt = f"""
                 Generate Manim code to create a detailed, educational animation explaining this concept: {request.description}
                 Use your creativity and artistic flair to make the animation visually appealing and engaging. At the same time
@@ -358,6 +320,9 @@ async def explain_concept(request: ConceptRequest):
                 7. Include at least 3-4 distinct scenes or concepts to ensure depth
                 8. Add meaningful labels and annotations to clarify concepts
                 9. The class name MUST be "ExplainConcept" and inherit from Scene
+                10. IMPORTANT: Add proper timing with self.wait() commands between animations
+                11. Each scene should display for at least 2-3 seconds using self.wait(2) or self.wait(3)
+                12. End with self.wait(2) to ensure complete rendering
                 
                 The animation should be 40-60 seconds in length with smooth transitions.
                 
@@ -369,10 +334,11 @@ async def explain_concept(request: ConceptRequest):
                 
                 DO NOT REFERENCE ANY EXTERNAL SVG OR IMAGE FILES.
                 Return only the Python code without any explanations or markdown.
+                Also provide a brief explanation of the visualization. Address the animation as visualization in explanation.
             """
         
             response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=prompt, config={
+                model="gemini-2.5-flash-preview-04-17", contents=prompt, config={
                     'response_mime_type': 'application/json',
                     'response_schema':  {
                         "type": "object",
@@ -393,7 +359,7 @@ async def explain_concept(request: ConceptRequest):
             python_code = json_response["python_code"]
             explanation = json_response["explanation"]
             
-            # Create files in a directory outside the project structure
+            # Create files in a directory outside the project structure to avoid reload issues
             temp_base_dir = os.path.join(os.path.expanduser("~"), "manim_temp")
             os.makedirs(temp_base_dir, exist_ok=True)
             script_path = os.path.join(temp_base_dir, f"concept_{request_id}.py")
@@ -401,43 +367,49 @@ async def explain_concept(request: ConceptRequest):
             with open(script_path, "w", encoding='utf-8') as f:
                 f.write(python_code)
             
-            # Create media directory
+            # Create media directory in the same external location
             media_dir = os.path.join(temp_base_dir, "media")
             os.makedirs(media_dir, exist_ok=True)
             
             print(f"Starting Manim rendering for: {script_path}")
             
-            # Run Manim with proper timeout
-            result = run_manim_with_timeout(script_path, media_dir, timeout=600)  # 10 minutes
+            # Run Manim with the external directory and timeout
+            result = subprocess.run(
+                ["manim", "-qm", "--media_dir", media_dir, script_path, "ExplainConcept"],
+                capture_output=True,
+                text=True,
+                cwd=temp_base_dir,
+                timeout=600  # 10 minute timeout
+            )
             
             if result.returncode != 0:
                 print(f"Manim stderr: {result.stderr}")
                 print(f"Manim stdout: {result.stdout}")
                 raise Exception(f"Manim execution failed: {result.stderr}")
 
-            # Find the generated video file with proper waiting
+            # Find the generated video file using a glob pattern to match any video file in the 720p30 directory
             video_dir = os.path.join(media_dir, "videos", f"concept_{request_id}", "720p30")
             
-            if not os.path.exists(video_dir):
-                raise Exception(f"Video directory not created: {video_dir}")
+            # Wait a bit for file system to sync
+            time.sleep(2)
             
-            print(f"Waiting for video file in: {video_dir}")
-            video_path = wait_for_video_file(video_dir, max_wait=120)  # Wait up to 2 minutes
+            video_files = glob.glob(os.path.join(video_dir, "*.mp4"))
             
-            # Validate video file
-            video_size = os.path.getsize(video_path)
-            if video_size < 10000:  # Less than 10KB is probably incomplete
-                raise Exception(f"Video file too small ({video_size} bytes), likely incomplete")
+            if not video_files:
+                raise Exception("No video file was generated")
             
-            print(f"Video generated successfully: {video_path} ({video_size} bytes)")
+            # Use the first video file found
+            video_path = video_files[0]
             
-            # Get video duration using ffprobe
+            print(f"Video generated successfully: {video_path}")
+            
+            # Get video duration using ffprobe for validation
             try:
                 duration_cmd = [
                     'ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
                     '-of', 'csv=p=0', video_path
                 ]
-                duration_result = subprocess.run(duration_cmd, capture_output=True, text=True)
+                duration_result = subprocess.run(duration_cmd, capture_output=True, text=True, timeout=30)
                 if duration_result.returncode == 0:
                     duration = float(duration_result.stdout.strip())
                     print(f"Video duration: {duration:.2f} seconds")
@@ -506,14 +478,7 @@ async def explain_concept(request: ConceptRequest):
                     print(f"Warning: Could not combine audio with video: {str(e)}")
                     final_video_path = video_path
             
-            # Validate final video
-            final_video_size = os.path.getsize(final_video_path)
-            if final_video_size < 10000:
-                raise Exception(f"Final video file too small ({final_video_size} bytes)")
-            
-            print(f"Final video ready: {final_video_path} ({final_video_size} bytes)")
-            
-            # Upload final video to Cloudinary
+            # Upload to Cloudinary
             print("Uploading to Cloudinary...")
             upload_result = cloudinary.uploader.upload(
                 final_video_path,
@@ -524,11 +489,17 @@ async def explain_concept(request: ConceptRequest):
             
             print(f"Upload successful: {upload_result['secure_url']}")
             
-            # Cleanup generated files
-            cleanup_files = [script_path, final_video_path]
+            # Cleanup the generated files
+            cleanup_files = [script_path]
+            
+            # Add video files to cleanup
+            for video_file in video_files:
+                cleanup_files.append(video_file)
+            
+            # Add final video if different from original
             if final_video_path != video_path:
-                cleanup_files.append(video_path)
-                
+                cleanup_files.append(final_video_path)
+            
             for file_path in cleanup_files:
                 try:
                     if os.path.exists(file_path):
@@ -549,7 +520,6 @@ async def explain_concept(request: ConceptRequest):
                 "audio_script": audio_script,
                 "attempts": attempt,
                 "has_audio": audio_path is not None,
-                "video_size_bytes": final_video_size
             }
             
             if audio_generation_errors:
@@ -567,26 +537,26 @@ async def explain_concept(request: ConceptRequest):
                 gemini_file_name = None
             
             # Clean up any files that might have been created in this attempt
-            cleanup_paths = []
-            if 'script_path' in locals():
-                cleanup_paths.append(script_path)
-            if 'video_path' in locals():
-                cleanup_paths.append(video_path)
-            if 'audio_path' in locals() and audio_path:
-                cleanup_paths.append(audio_path)
-            if 'final_video_path' in locals() and final_video_path:
-                cleanup_paths.append(final_video_path)
+            try:
+                if 'script_path' in locals() and os.path.exists(script_path):
+                    os.remove(script_path)
                 
-            for path in cleanup_paths:
-                try:
-                    if os.path.exists(path):
-                        os.remove(path)
-                except:
-                    pass
+                if 'video_files' in locals():
+                    for video_file in video_files:
+                        if os.path.exists(video_file):
+                            os.remove(video_file)
+                
+                if 'audio_path' in locals() and audio_path and os.path.exists(audio_path):
+                    os.remove(audio_path)
+                
+                if 'final_video_path' in locals() and final_video_path and os.path.exists(final_video_path):
+                    os.remove(final_video_path)
+            except:
+                pass
             
             # Wait before retrying
             if attempt < max_attempts:
-                wait_time = min(5 * attempt, 15)  # Progressive backoff
+                wait_time = min(3 * attempt, 10)  # Progressive backoff
                 print(f"Waiting {wait_time} seconds before retry...")
                 time.sleep(wait_time)
     
@@ -596,7 +566,6 @@ async def explain_concept(request: ConceptRequest):
     
     raise HTTPException(status_code=500, detail=f"Failed after {max_attempts} attempts. Last error: {last_error}")
 
-# Rest of your existing code for video deletion and game generation...
 class VideoRequest(BaseModel):
     video_url: str
 
@@ -604,11 +573,18 @@ class VideoRequest(BaseModel):
 async def delete_video(request: VideoRequest):
     video_url = request.video_url
     try:
-        match = re.search(r'upload/v\d+/(.+)\.\w+', video_url)
+        # Extract the public_id from the Cloudinary URL
+        # Cloudinary URLs typically look like: https://res.cloudinary.com/cloud_name/video/upload/v1234567890/folder/public_id.mp4
+        match = re.search(r'upload/v\d+/(.+)\.\w+$', video_url)
         if not match:
             raise HTTPException(status_code=400, detail="Invalid Cloudinary URL format")
         
         public_id = match.group(1)
+        
+        # The public_id now includes the folder, e.g., "concept_explanations/bruwtqelu1kciogqze6z"
+        # No need to add the folder prefix manually
+        
+        # Delete the video from Cloudinary
         result = cloudinary.uploader.destroy(public_id, resource_type="video")
         
         if result.get('result') != 'ok':
@@ -618,155 +594,3 @@ async def delete_video(request: VideoRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting video: {str(e)}")
-
-class GameRequest(BaseModel):
-    title: str
-    concept: str
-    difficulty: str
-    gameType: str
-    instructions: str
-
-@app.post("/generate-game")
-async def generate_game(request: GameRequest):
-    try:
-        game_id = str(uuid.uuid4())
-        p5js_code = generate_game_code(request.concept, request.difficulty, request.gameType, request.instructions)
-        
-        game_data = {
-            "title": request.title,
-            "concept": request.concept,
-            "difficulty": request.difficulty,
-            "gameType": request.gameType,
-            "instructions": request.instructions,
-            "description": p5js_code["game_description"],
-            "code": p5js_code["game_code"],
-            "id": game_id,
-        }
-
-        try:
-            temp_file_path = os.path.join(tempfile.gettempdir(), f"game_{game_id}.json")
-            with open(temp_file_path, 'w', encoding='utf-8') as temp_file:
-                json.dump(game_data, temp_file)
-            
-            if not os.path.exists(temp_file_path) or os.path.getsize(temp_file_path) == 0:
-                raise Exception("Failed to create temporary file or file is empty")
-            
-            upload_result = cloudinary.uploader.upload(
-                temp_file_path,
-                resource_type="raw",
-                folder="games",
-                public_id=game_id
-            )
-            print(f"Game data uploaded to Cloudinary: {upload_result}")
-        except Exception as e:
-            print(f"Error uploading game data to Cloudinary: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to upload game data to Cloudinary")
-        
-        return {
-            "game_id": game_id,
-            "cloudinary_url": upload_result["secure_url"],
-            "description": p5js_code["game_description"],
-        }
-    except Exception as e:
-        print(f"Error generating game: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-def generate_game_code(concept, difficulty, game_type, instructions):
-    prompt = f"""
-        Create a simple educational game using Pygame to teach the concept: {concept}.
-        Difficulty level: {difficulty}.
-        Game type: {game_type}
-        Instructions: {instructions}
-        
-        IMPORTANT REQUIREMENTS FOR PYGBAG COMPATIBILITY:
-        1. The game must use asyncio and be compatible with Pygbag for web deployment
-        2. Include the following imports: import asyncio, pygame, math, random, sys
-        3. Structure the code with an async main() function
-        4. Use the following template structure:
-        
-        
-        import asyncio
-        import pygame
-        import math
-        import random
-        import sys
-        
-        # Initialize pygame
-        pygame.init()
-        
-        # Game constants
-        WIDTH, HEIGHT = 800, 600
-        FPS = 60
-        
-        # Define colors
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
-        # Add more colors as needed
-        
-        # Create the screen
-        screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("{concept} Learning Game")
-        
-        # Game variables and classes here
-        
-        async def main():
-            # Game initialization
-            clock = pygame.time.Clock()
-            running = True
-            
-            # Game loop
-            while running:
-                # Handle events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                
-                # Game logic
-                
-                # Drawing
-                screen.fill(BLACK)
-                
-                # Your drawing code here
-                
-                pygame.display.flip()
-                clock.tick(FPS)
-                await asyncio.sleep(0)
-            
-            pygame.quit()
-            
-        asyncio.run(main())
-        
-        
-        Do not reference any external files or images. Use simple shapes and colors.
-        The game should be educational, teaching the concept of {concept} through interactive gameplay.
-        Make sure the game is fully functional and error-free.
-    """
-
-    response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=prompt, config={
-            'response_mime_type': 'application/json',
-            'response_schema': {
-                "type": "object",
-                "properties": {
-                    "game_code": {
-                        "type": "string"
-                    },
-                    "game_description": {
-                        "type": "string"
-                    },
-                },
-                "required": ["game_code", "game_description"]
-            }
-        }
-    )
-
-    json_response = json.loads(response.text)
-    game_code = json_response["game_code"]
-    game_description = json_response["game_description"]
-
-    return {
-        "game_code": game_code,
-        "game_description": game_description
-    }
-      
-

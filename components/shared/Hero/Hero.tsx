@@ -27,6 +27,21 @@ export default function Hero() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
+            {/* Beta Badge */}
+            <motion.div
+              className="flex justify-center lg:justify-start"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 backdrop-blur-sm">
+                <div className="w-2 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="text-sm font-medium bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  Currently in Beta
+                </span>
+              </div>
+            </motion.div>
+
             <HeroTitle />
             <HeroDescription />
             <HeroSignIn />
