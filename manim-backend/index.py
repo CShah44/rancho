@@ -57,14 +57,12 @@ def generate_audio_script_from_video(video_path: str, description: str) -> tuple
         print(f"File uploaded successfully: {uploaded_file.name}")
         
         # Wait for the file to be processed and become active
-        import time
-        max_wait_time = 30  # Maximum wait time in seconds
-        wait_interval = 2   # Check every 2 seconds
+        max_wait_time = 60  # Increased wait time
+        wait_interval = 3   # Check every 3 seconds
         elapsed_time = 0
         
         while elapsed_time < max_wait_time:
             try:
-                # Get file status
                 file_info = client.files.get(name=uploaded_file.name)
                 print(f"File state: {file_info.state}")
                 
@@ -140,7 +138,6 @@ def cleanup_gemini_file(file_name: str):
         return
         
     try:
-        # Check if file exists before trying to delete
         try:
             file_info = client.files.get(name=file_name)
             print(f"File {file_name} exists, attempting to delete...")
@@ -148,7 +145,6 @@ def cleanup_gemini_file(file_name: str):
             print(f"File {file_name} not found, skipping deletion")
             return
         
-        # Delete the file
         client.files.delete(name=file_name)
         print(f"Successfully deleted Gemini file: {file_name}")
         
@@ -175,16 +171,13 @@ async def generate_audio_with_edge_tts_async(text: str, voice: str = "en-US-Aria
 def generate_audio_with_edge_tts(text: str, voice: str = "en-US-AriaNeural", output_path: str = None) -> str:
     """Generate audio using Edge TTS (free Microsoft service) - sync wrapper."""
     try:
-        # Clean text to avoid encoding issues
         clean_text = text.encode('ascii', 'ignore').decode('ascii')
         if not clean_text.strip():
-            clean_text = text  # Fallback to original if cleaning removes everything
+            clean_text = text
             
-        # Try to run in existing event loop or create new one
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
-                # If loop is running, we need to use run_in_executor
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
@@ -194,7 +187,6 @@ def generate_audio_with_edge_tts(text: str, voice: str = "en-US-AriaNeural", out
             else:
                 return loop.run_until_complete(generate_audio_with_edge_tts_async(clean_text, voice, output_path))
         except RuntimeError:
-            # No event loop, create new one
             return asyncio.run(generate_audio_with_edge_tts_async(clean_text, voice, output_path))
             
     except ImportError:
@@ -210,38 +202,31 @@ def generate_audio_with_pyttsx3(text: str, voice_type: str = "male", rate: int =
         if output_path is None:
             output_path = os.path.join(tempfile.gettempdir(), f"audio_{uuid.uuid4()}.wav")
         
-        # Initialize engine with error handling for Linux
         try:
-            engine = pyttsx3.init('espeak')  # Use espeak driver on Linux
+            engine = pyttsx3.init('espeak')
         except:
             try:
-                engine = pyttsx3.init()  # Fallback to default
+                engine = pyttsx3.init()
             except:
                 raise Exception("Could not initialize TTS engine")
         
-        # Set speech rate
         engine.setProperty('rate', rate)
         
-        # Set voice based on preference (Linux has limited voice options)
         try:
             voices = engine.getProperty('voices')
             if voices and len(voices) > 0:
-                # Use first available voice
                 engine.setProperty('voice', voices[0].id)
         except:
-            pass  # Use default voice if voice setting fails
+            pass
         
-        # Set volume
         try:
             engine.setProperty('volume', 0.9)
         except:
-            pass  # Skip if volume setting fails
+            pass
         
-        # Save to file
         engine.save_to_file(text, output_path)
         engine.runAndWait()
         
-        # Check if file was created
         if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
             raise Exception("Audio file was not created or is empty")
         
@@ -258,22 +243,22 @@ def combine_video_audio(video_path: str, audio_path: str, output_path: str = Non
         if output_path is None:
             output_path = os.path.join(tempfile.gettempdir(), f"final_video_{uuid.uuid4()}.mp4")
         
-        # Use FFmpeg directly for better compatibility and performance
         ffmpeg_cmd = [
             'ffmpeg',
-            '-i', video_path,           # Input video
-            '-i', audio_path,           # Input audio
-            '-c:v', 'copy',             # Copy video codec (faster)
-            '-c:a', 'aac',              # Use AAC audio codec
-            '-shortest',                # Use shortest duration (video or audio)
-            '-y',                       # Overwrite output file
+            '-i', video_path,
+            '-i', audio_path,
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-shortest',
+            '-y',
             output_path
         ]
         
         result = subprocess.run(
             ffmpeg_cmd,
             capture_output=True,
-            text=True
+            text=True,
+            timeout=300  # 5 minute timeout
         )
         
         if result.returncode != 0:
@@ -286,10 +271,11 @@ def combine_video_audio(video_path: str, audio_path: str, output_path: str = Non
         
     except FileNotFoundError:
         raise Exception("FFmpeg not found. Please install FFmpeg.")
+    except subprocess.TimeoutExpired:
+        raise Exception("FFmpeg operation timed out")
     except Exception as e:
         raise Exception(f"Error combining video and audio: {str(e)}")
 
-# Remove the combine_video_audio_moviepy function entirely
 def get_voice_mapping(voice_type: str, speech_speed: float = 1.0):
     """Get appropriate voice settings for different TTS services."""
     edge_voices = {
@@ -305,9 +291,48 @@ def get_voice_mapping(voice_type: str, speech_speed: float = 1.0):
         "pyttsx3_rate": pyttsx3_rate
     }
 
+def run_manim_with_timeout(script_path: str, media_dir: str, timeout: int = 300) -> subprocess.CompletedProcess:
+    """Run Manim with proper timeout and error handling."""
+    try:
+        result = subprocess.run(
+            ["manim", "-qm", "--media_dir", media_dir, script_path, "ExplainConcept"],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(script_path),
+            timeout=timeout
+        )
+        return result
+    except subprocess.TimeoutExpired:
+        raise Exception(f"Manim rendering timed out after {timeout} seconds")
+    except Exception as e:
+        raise Exception(f"Error running Manim: {str(e)}")
+
+def wait_for_video_file(video_dir: str, max_wait: int = 60) -> str:
+    """Wait for video file to be completely written."""
+    start_time = time.time()
+    
+    while time.time() - start_time < max_wait:
+        video_files = glob.glob(os.path.join(video_dir, "*.mp4"))
+        
+        if video_files:
+            video_path = video_files[0]
+            
+            # Check if file is still being written
+            initial_size = os.path.getsize(video_path)
+            time.sleep(2)  # Wait 2 seconds
+            final_size = os.path.getsize(video_path)
+            
+            if initial_size == final_size and final_size > 1000:  # File is stable and not tiny
+                print(f"Video file ready: {video_path} ({final_size} bytes)")
+                return video_path
+        
+        time.sleep(1)
+    
+    raise Exception("Video file was not generated within timeout period")
+
 @app.post("/explain-concept")
 async def explain_concept(request: ConceptRequest):
-    max_attempts = 4
+    max_attempts = 3  # Reduced attempts but better error handling
     attempt = 0
     last_error = None
     gemini_file_name = None
@@ -315,10 +340,9 @@ async def explain_concept(request: ConceptRequest):
     while attempt < max_attempts:
         attempt += 1
         try:
-            # Generate a unique ID for this request
             request_id = str(uuid.uuid4())
             
-            # Enhanced prompt with stricter requirements and better guidance
+            # Enhanced prompt with better duration control
             prompt = f"""
                 Generate Manim code to create a detailed, educational animation explaining this concept: {request.description}
                 Use your creativity and artistic flair to make the animation visually appealing and engaging. At the same time
@@ -366,8 +390,6 @@ async def explain_concept(request: ConceptRequest):
             )
 
             json_response = json.loads(response.text)
-
-            # Extract the generated content
             python_code = json_response["python_code"]
             explanation = json_response["explanation"]
             
@@ -376,32 +398,54 @@ async def explain_concept(request: ConceptRequest):
             os.makedirs(temp_base_dir, exist_ok=True)
             script_path = os.path.join(temp_base_dir, f"concept_{request_id}.py")
             
-            with open(script_path, "w") as f:
+            with open(script_path, "w", encoding='utf-8') as f:
                 f.write(python_code)
             
             # Create media directory
             media_dir = os.path.join(temp_base_dir, "media")
             os.makedirs(media_dir, exist_ok=True)
             
-            # Run Manim to generate video
-            result = subprocess.run(
-                ["manim", "-qm", "--media_dir", media_dir, script_path, "ExplainConcept"],
-                capture_output=True,
-                text=True,
-                cwd=temp_base_dir
-            )
+            print(f"Starting Manim rendering for: {script_path}")
+            
+            # Run Manim with proper timeout
+            result = run_manim_with_timeout(script_path, media_dir, timeout=600)  # 10 minutes
             
             if result.returncode != 0:
+                print(f"Manim stderr: {result.stderr}")
+                print(f"Manim stdout: {result.stdout}")
                 raise Exception(f"Manim execution failed: {result.stderr}")
 
-            # Find the generated video file
+            # Find the generated video file with proper waiting
             video_dir = os.path.join(media_dir, "videos", f"concept_{request_id}", "720p30")
-            video_files = glob.glob(os.path.join(video_dir, "*.mp4"))
             
-            if not video_files:
-                raise Exception("No video file was generated")
-
-            video_path = video_files[0]
+            if not os.path.exists(video_dir):
+                raise Exception(f"Video directory not created: {video_dir}")
+            
+            print(f"Waiting for video file in: {video_dir}")
+            video_path = wait_for_video_file(video_dir, max_wait=120)  # Wait up to 2 minutes
+            
+            # Validate video file
+            video_size = os.path.getsize(video_path)
+            if video_size < 10000:  # Less than 10KB is probably incomplete
+                raise Exception(f"Video file too small ({video_size} bytes), likely incomplete")
+            
+            print(f"Video generated successfully: {video_path} ({video_size} bytes)")
+            
+            # Get video duration using ffprobe
+            try:
+                duration_cmd = [
+                    'ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+                    '-of', 'csv=p=0', video_path
+                ]
+                duration_result = subprocess.run(duration_cmd, capture_output=True, text=True)
+                if duration_result.returncode == 0:
+                    duration = float(duration_result.stdout.strip())
+                    print(f"Video duration: {duration:.2f} seconds")
+                    
+                    if duration < 5:  # Less than 5 seconds is probably incomplete
+                        raise Exception(f"Video duration too short ({duration:.2f}s), likely incomplete")
+            except Exception as e:
+                print(f"Warning: Could not check video duration: {e}")
             
             # Generate audio script based on the rendered video
             try:
@@ -410,37 +454,49 @@ async def explain_concept(request: ConceptRequest):
                 print("Audio script generated successfully")
             except Exception as e:
                 print(f"Warning: Could not generate audio script from video: {str(e)}")
-                # Clean up any uploaded file
                 if gemini_file_name:
                     cleanup_gemini_file(gemini_file_name)
                     gemini_file_name = None
-                # Fallback to a basic script based on the concept
                 audio_script = f"This animation explains the concept of {request.description}. Let's explore this educational topic step by step through visual demonstration."
             
-            # Generate audio narration using pyttsx3
+            # Generate audio narration
             voice_settings = get_voice_mapping(request.voice_type, request.speech_speed)
             audio_path = None
             audio_generation_errors = []
             
-            # Use pyttsx3 to generate audio
+            # Try Edge TTS first (better quality)
             try:
-                audio_path = generate_audio_with_pyttsx3(
-                    audio_script, request.voice_type, voice_settings["pyttsx3_rate"]
+                audio_path = generate_audio_with_edge_tts(
+                    audio_script, voice_settings["edge_voice"]
                 )
                 if not audio_path or not os.path.exists(audio_path):
                     raise Exception("Audio file was not created")
+                print("Audio generated successfully with Edge TTS")
             except Exception as e:
-                audio_generation_errors.append(f"pyttsx3: {str(e)}")
-                print(f"Warning: Could not generate audio with pyttsx3: {str(e)}")
+                audio_generation_errors.append(f"edge-tts: {str(e)}")
+                print(f"Edge TTS failed, trying pyttsx3: {str(e)}")
+                
+                # Fallback to pyttsx3
+                try:
+                    audio_path = generate_audio_with_pyttsx3(
+                        audio_script, request.voice_type, voice_settings["pyttsx3_rate"]
+                    )
+                    if not audio_path or not os.path.exists(audio_path):
+                        raise Exception("Audio file was not created")
+                    print("Audio generated successfully with pyttsx3")
+                except Exception as e2:
+                    audio_generation_errors.append(f"pyttsx3: {str(e2)}")
+                    print(f"Warning: Could not generate audio with pyttsx3: {str(e2)}")
             
             if not audio_path:
                 print(f"Warning: Could not generate audio. Errors: {audio_generation_errors}")
-                # Continue with video-only if audio generation fails
                 final_video_path = video_path
             else:
                 # Combine video and audio
                 try:
+                    print("Combining video and audio...")
                     final_video_path = combine_video_audio(video_path, audio_path)
+                    print(f"Video and audio combined successfully: {final_video_path}")
                     
                     # Clean up audio file
                     if os.path.exists(audio_path):
@@ -448,15 +504,25 @@ async def explain_concept(request: ConceptRequest):
                         
                 except Exception as e:
                     print(f"Warning: Could not combine audio with video: {str(e)}")
-                    # Fall back to video-only
                     final_video_path = video_path
             
+            # Validate final video
+            final_video_size = os.path.getsize(final_video_path)
+            if final_video_size < 10000:
+                raise Exception(f"Final video file too small ({final_video_size} bytes)")
+            
+            print(f"Final video ready: {final_video_path} ({final_video_size} bytes)")
+            
             # Upload final video to Cloudinary
+            print("Uploading to Cloudinary...")
             upload_result = cloudinary.uploader.upload(
                 final_video_path,
                 resource_type="video",
-                folder="concept_explanations"
+                folder="concept_explanations",
+                timeout=300  # 5 minute timeout
             )
+            
+            print(f"Upload successful: {upload_result['secure_url']}")
             
             # Cleanup generated files
             cleanup_files = [script_path, final_video_path]
@@ -467,10 +533,11 @@ async def explain_concept(request: ConceptRequest):
                 try:
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                except:
-                    pass
+                        print(f"Cleaned up: {file_path}")
+                except Exception as e:
+                    print(f"Warning: Could not clean up {file_path}: {e}")
             
-            # Clean up Gemini uploaded file at the end
+            # Clean up Gemini uploaded file
             if gemini_file_name:
                 cleanup_gemini_file(gemini_file_name)
                 gemini_file_name = None
@@ -481,7 +548,8 @@ async def explain_concept(request: ConceptRequest):
                 "explanation": explanation,
                 "audio_script": audio_script,
                 "attempts": attempt,
-                "has_audio": audio_path is not None
+                "has_audio": audio_path is not None,
+                "video_size_bytes": final_video_size
             }
             
             if audio_generation_errors:
@@ -502,8 +570,8 @@ async def explain_concept(request: ConceptRequest):
             cleanup_paths = []
             if 'script_path' in locals():
                 cleanup_paths.append(script_path)
-            if 'video_files' in locals():
-                cleanup_paths.extend(video_files)
+            if 'video_path' in locals():
+                cleanup_paths.append(video_path)
             if 'audio_path' in locals() and audio_path:
                 cleanup_paths.append(audio_path)
             if 'final_video_path' in locals() and final_video_path:
@@ -518,7 +586,9 @@ async def explain_concept(request: ConceptRequest):
             
             # Wait before retrying
             if attempt < max_attempts:
-                time.sleep(2)  # Increased wait time between retries
+                wait_time = min(5 * attempt, 15)  # Progressive backoff
+                print(f"Waiting {wait_time} seconds before retry...")
+                time.sleep(wait_time)
     
     # Final cleanup
     if gemini_file_name:
@@ -698,3 +768,5 @@ def generate_game_code(concept, difficulty, game_type, instructions):
         "game_code": game_code,
         "game_description": game_description
     }
+      
+
