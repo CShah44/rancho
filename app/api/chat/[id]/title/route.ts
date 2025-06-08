@@ -4,8 +4,9 @@ import { updateChatTitle, getChatById } from "@/lib/db/queries";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  segmentData: { params: Promise<{ id: string }> }
 ) {
+  const { params } = segmentData;
   try {
     const session = await auth();
 
