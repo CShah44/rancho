@@ -69,7 +69,7 @@ export function EditableChatItem({
 
     try {
       const response = await fetch(`/api/chat/${chat.id}/title`, {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },

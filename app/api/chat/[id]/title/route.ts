@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { updateChatTitle, getChatById } from "@/lib/db/queries";
 
-export async function PATCH(
+export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
