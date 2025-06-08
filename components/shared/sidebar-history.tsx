@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { Chat } from "@/lib/db/schema";
 import { fetcher } from "@/lib/utils";
-import { ChatItem } from "./sidebar-history-item";
+import { EditableChatItem } from "./editable-chat-item";
 import useSWRInfinite from "swr/infinite";
 import { LoaderIcon, X, MessageSquare, Clock } from "lucide-react";
 import { Button } from "../ui/button";
@@ -284,20 +284,13 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     setDeleteId(null);
   };
 
-  if (!user && !isLoading && !paginatedChatHistories && !isValidating) {
-    return (
-      <EmptyState message="Login to save and revisit your conversations!" />
-    );
-  }
-
+  // Loading state
   if (isLoading || (!paginatedChatHistories && isValidating)) {
     return (
       <SidebarGroup>
-        <div className="px-3 py-2 flex items-center space-x-2">
-          <Clock size={14} className="text-zinc-400" />
-          <span className="text-xs text-zinc-400 font-medium">
-            Chat History
-          </span>
+        <div className="px-3 py-2 text-xs text-zinc-400 font-medium flex items-center gap-2">
+          <Clock size={12} />
+          Loading chats
         </div>
         <SidebarGroupContent>
           <LoadingSkeleton />
@@ -306,6 +299,17 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     );
   }
 
+  // Not logged in state
+  if (!user && !isLoading && !paginatedChatHistories && !isValidating) {
+    return (
+      <EmptyState
+        user={user}
+        message="Login to save and revisit previous chats!"
+      />
+    );
+  }
+
+  // Empty chat history state
   if (hasEmptyChatHistory) {
     return (
       <EmptyState
@@ -318,16 +322,8 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   return (
     <>
       <SidebarGroup>
-        <div className="px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Clock size={14} className="text-zinc-400" />
-            <span className="text-xs text-zinc-400 font-medium">
-              Chat History
-            </span>
-          </div>
-        </div>
         <SidebarGroupContent>
-          <SidebarMenu>
+          <SidebarMenu className="space-y-1">
             {paginatedChatHistories &&
               (() => {
                 const chatsFromHistory = paginatedChatHistories.flatMap(
@@ -337,15 +333,15 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                 const groupedChats = groupChatsByDate(chatsFromHistory);
 
                 return (
-                  <div className="flex flex-col space-y-4 sm:space-y-6">
+                  <div className="space-y-6">
                     {groupedChats.today.length > 0 && (
                       <div className="space-y-1">
-                        <div className="px-3 py-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        <div className="px-3 py-1 text-xs text-zinc-400 font-medium flex items-center gap-2">
                           Today
                         </div>
                         <div className="space-y-1">
                           {groupedChats.today.map((chat) => (
-                            <ChatItem
+                            <EditableChatItem
                               key={chat.id}
                               chat={chat}
                               isActive={chat.id === id}
@@ -362,12 +358,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
                     {groupedChats.yesterday.length > 0 && (
                       <div className="space-y-1">
-                        <div className="px-3 py-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        <div className="px-3 py-1 text-xs text-zinc-400 font-medium flex items-center gap-2">
                           Yesterday
                         </div>
                         <div className="space-y-1">
                           {groupedChats.yesterday.map((chat) => (
-                            <ChatItem
+                            <EditableChatItem
                               key={chat.id}
                               chat={chat}
                               isActive={chat.id === id}
@@ -384,12 +380,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
                     {groupedChats.lastWeek.length > 0 && (
                       <div className="space-y-1">
-                        <div className="px-3 py-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        <div className="px-3 py-1 text-xs text-zinc-400 font-medium flex items-center gap-2">
                           Last 7 days
                         </div>
                         <div className="space-y-1">
                           {groupedChats.lastWeek.map((chat) => (
-                            <ChatItem
+                            <EditableChatItem
                               key={chat.id}
                               chat={chat}
                               isActive={chat.id === id}
@@ -406,12 +402,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
                     {groupedChats.lastMonth.length > 0 && (
                       <div className="space-y-1">
-                        <div className="px-3 py-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        <div className="px-3 py-1 text-xs text-zinc-400 font-medium flex items-center gap-2">
                           Last 30 days
                         </div>
                         <div className="space-y-1">
                           {groupedChats.lastMonth.map((chat) => (
-                            <ChatItem
+                            <EditableChatItem
                               key={chat.id}
                               chat={chat}
                               isActive={chat.id === id}
@@ -428,12 +424,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
                     {groupedChats.older.length > 0 && (
                       <div className="space-y-1">
-                        <div className="px-3 py-1 text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        <div className="px-3 py-1 text-xs text-zinc-400 font-medium flex items-center gap-2">
                           Older
                         </div>
                         <div className="space-y-1">
                           {groupedChats.older.map((chat) => (
-                            <ChatItem
+                            <EditableChatItem
                               key={chat.id}
                               chat={chat}
                               isActive={chat.id === id}
@@ -452,6 +448,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
               })()}
           </SidebarMenu>
 
+          {/* Infinite scroll trigger */}
           <motion.div
             onViewportEnter={() => {
               if (!isValidating && !hasReachedEnd) {
@@ -460,17 +457,19 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
             }}
           />
 
+          {/* Loading more indicator */}
           {!hasReachedEnd && !isLoading && (
-            <div className="p-4 text-zinc-500 flex flex-row gap-2 items-center justify-center mt-6">
+            <div className="p-4 text-zinc-500 flex flex-row gap-2 items-center justify-center">
               <div className="animate-spin">
                 <LoaderIcon size={14} />
               </div>
-              <div className="text-xs">Loading more...</div>
+              <div className="text-xs">Loading more chats...</div>
             </div>
           )}
         </SidebarGroupContent>
       </SidebarGroup>
 
+      {/* Enhanced Delete Modal */}
       <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -479,3 +478,4 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     </>
   );
 }
+export default SidebarHistory;
