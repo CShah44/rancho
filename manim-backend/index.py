@@ -37,6 +37,8 @@ def read_root():
     return {"Hello": "World"}
 
 
+# TODO: CLEANUP ERROR ONLY MAIN VIDEO IS CLEARED
+
 @app.post("/explain-concept")
 async def explain_concept(request: ConceptRequest):
     max_attempts = 3
@@ -52,7 +54,7 @@ async def explain_concept(request: ConceptRequest):
             # Enhanced prompt with stricter requirements and better guidance
             prompt = f"""
                 Generate Manim code to create a detailed, educational animation explaining this concept: {request.description}
-                Use you creativity and artistic flair to make the animation visually appealing and engaging. At the same time
+                Use your creativity and artistic flair to make the animation visually appealing and engaging. At the same time
                 the concepts should be clear and easy to understand. The animation should be suitable for educational purposes.
 
                 STRICT REQUIREMENTS:
@@ -65,6 +67,12 @@ async def explain_concept(request: ConceptRequest):
                 7. Include at least 3-4 distinct scenes or concepts to ensure depth
                 8. Add meaningful labels and annotations to clarify concepts
                 9. The class name MUST be "ExplainConcept" and inherit from Scene
+                10. IMPORTANT: Add proper timing with self.wait() commands between animations
+                11. Each scene should display for at least 2-3 seconds using self.wait(2) or self.wait(3)
+                12. End with self.wait(2) to ensure complete rendering
+                13. DO NOT use any Unicode characters, emojis, or special symbols in the code
+                14. Use only ASCII characters and standard English text
+                15. Replace any symbols with descriptive text (e.g., "lock" instead of 🔒)
                 
                 The animation should be 40-60 seconds in length with smooth transitions.
                 
@@ -75,12 +83,14 @@ async def explain_concept(request: ConceptRequest):
                 - Use clear, direct language without unnecessary jargon
                 
                 DO NOT REFERENCE ANY EXTERNAL SVG OR IMAGE FILES.
+                DO NOT USE UNICODE CHARACTERS OR EMOJIS IN THE CODE.
                 Return only the Python code without any explanations or markdown.
                 Also provide a brief explanation of the visualization. Address the animation as visualization in explanation.
             """
-        
+
+
             response = client.models.generate_content(
-                model="gemini-2.5-flash-preview-05-20", contents=prompt, config={
+                model="gemini-2.0-flash", contents=prompt, config={
                     'response_mime_type': 'application/json',
                     'response_schema':  {
                         "type": "object",

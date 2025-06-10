@@ -9,6 +9,12 @@ import {
   saveChat,
   saveMessages,
 } from "@/lib/db/queries";
+import {
+  hasEnoughCredits,
+  deductCredits,
+  getVideoGenerationCost,
+  getGameGenerationCost,
+} from "@/lib/db/credit-queries";
 import { generateTitleFromUserMessage } from "./actions";
 import { getMostRecentUserMessage, getTrailingMessageId } from "@/lib/utils";
 import { generateP5Code } from "@/app/game/actions";
@@ -66,10 +72,10 @@ export async function POST(req: Request) {
         - Suggest visualization opportunities when explaining complex topics
         
         You have access to four tools:
-        1. Video animations - These are high-quality educational animations that illustrate concepts dynamically
-        2. Images - These are static visuals that can help explain concepts or provide examples
-        3. Quiz - Generate interactive quizzes to test understanding of concepts
-        4. Game - Create interactive p5.js sketches and games to demonstrate scientific and mathematical concepts
+        1. Video animations - These are high-quality educational animations that illustrate concepts dynamically (costs credits)
+        2. Images - These are static visuals that can help explain concepts or provide examples (free)
+        3. Quiz - Generate interactive quizzes to test understanding of concepts (free)
+        4. Game - Create interactive p5.js sketches and games to demonstrate scientific and mathematical concepts (costs credits)
         
         Prioritize using video animations when explaining complex concepts that benefit from dynamic visualization.
         Use images when a static visual would suffice or when specifically requested by the student.
@@ -84,7 +90,7 @@ export async function POST(req: Request) {
       tools: {
         video: {
           description:
-            "Generate educational animations that illustrate scientific or mathematical concepts. The animations will be rendered as videos and returned to the student.",
+            "Generate educational animations that illustrate scientific or mathematical concepts. The animations will be rendered as videos and returned to the student. This tool costs credits.",
           parameters: z.object(
             {
               title: z
@@ -105,6 +111,30 @@ export async function POST(req: Request) {
           ),
           execute: async ({ title, description }) => {
             try {
+              // Check if user has enough credits
+              const requiredCredits = await getVideoGenerationCost();
+
+              if (!session?.user?.id) {
+                return {
+                  type: "text",
+                  status: "error",
+                  text: "Unauthorized: User session not found",
+                };
+              }
+
+              const hasCredits = await hasEnoughCredits(
+                session.user.id,
+                requiredCredits
+              );
+
+              if (!hasCredits) {
+                return {
+                  type: "text",
+                  status: "credit-error",
+                  text: `⚠️ **Insufficient Credits**: You need ${requiredCredits} credits to generate a video animation. Please purchase more credits to continue using this feature.`,
+                };
+              }
+
               // Call the FastAPI backend to generate the video
               const response = await fetch(
                 `${process.env.BACKEND_URL}/explain-concept`,
@@ -138,6 +168,14 @@ export async function POST(req: Request) {
                 };
               }
 
+              // Deduct credits only after successful generation
+              await deductCredits({
+                userId: session.user.id,
+                amount: requiredCredits,
+                description: `Video animation: ${title}`,
+                relatedId: id, // chat ID
+              });
+
               return {
                 type: "video",
                 status: "success",
@@ -145,10 +183,13 @@ export async function POST(req: Request) {
                 videoUrl: videoUrl,
                 explanation: explanation,
                 mimeType: "video/mp4",
+                creditsUsed: requiredCredits,
               };
             } catch (error) {
+              console.error("Video generation error:", error);
               return {
                 type: "text",
+                status: "error",
                 text: `Failed to generate animation: ${error}`,
               };
             }
@@ -156,7 +197,7 @@ export async function POST(req: Request) {
         },
         image: {
           description:
-            "Search for relevant educational images to illustrate concepts or provide visual examples",
+            "Search for relevant educational images to illustrate concepts or provide visual examples. This tool is free to use.",
           parameters: z.object(
             {
               query: z
@@ -237,7 +278,7 @@ export async function POST(req: Request) {
         },
         quiz: {
           description:
-            "Generate an interactive quiz to test understanding of scientific or mathematical concepts",
+            "Generate an interactive quiz to test understanding of scientific or mathematical concepts. This tool is free to use.",
           parameters: z.object(
             {
               topic: z
@@ -294,7 +335,7 @@ export async function POST(req: Request) {
         },
         game: {
           description:
-            "Generate interactive p5.js sketches and games to demonstrate scientific or mathematical concepts",
+            "Generate interactive p5.js sketches and games to demonstrate scientific or mathematical concepts. This tool costs credits.",
           parameters: z.object(
             {
               topic: z
@@ -315,9 +356,41 @@ export async function POST(req: Request) {
           ),
           execute: async ({ topic, description }) => {
             try {
+              // Check if user has enough credits
+              const requiredCredits = await getGameGenerationCost();
+
+              if (!session?.user?.id) {
+                return {
+                  type: "text",
+                  status: "error",
+                  text: "Unauthorized: User session not found",
+                };
+              }
+
+              const hasCredits = await hasEnoughCredits(
+                session.user.id,
+                requiredCredits
+              );
+
+              if (!hasCredits) {
+                return {
+                  type: "text",
+                  status: "credit-error",
+                  text: `⚠️ **Insufficient Credits**: You need ${requiredCredits} credits to generate an interactive game. Please purchase more credits to continue using this feature.`,
+                };
+              }
+
               const result = await generateP5Code({ prompt: description });
 
               if (result.success && result.code) {
+                // Deduct credits only after successful generation
+                await deductCredits({
+                  userId: session.user.id,
+                  amount: requiredCredits,
+                  description: `Interactive game: ${topic}`,
+                  relatedId: id, // chat ID
+                });
+
                 return {
                   type: "game",
                   status: "success",
@@ -325,6 +398,7 @@ export async function POST(req: Request) {
                   title: result.title || "Interactive Sketch",
                   code: result.code,
                   info: result.info || "",
+                  creditsUsed: requiredCredits,
                 };
               } else {
                 return {

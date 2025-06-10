@@ -378,7 +378,7 @@ const VideoTool = ({ video, id }: { video: VideoToolResult; id: string }) => {
       {!isFullscreen && (
         <div className="p-4 sm:p-6 bg-gradient-to-r from-zinc-800/50 to-zinc-700/50 backdrop-blur-sm border-t border-zinc-700/50">
           <h4 className="font-semibold mb-3 text-white text-sm sm:text-base">
-            About this Video
+            What&apos;s the video about?
           </h4>
           <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed prose prose-sm prose-invert max-w-none">
             <MemoizedMarkdown

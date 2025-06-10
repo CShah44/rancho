@@ -108,6 +108,40 @@ const Message = ({ message }: MessageProps) => {
                         game={part.toolInvocation.result}
                       />
                     );
+                  } else if (part.toolInvocation.result.status === "error") {
+                    return (
+                      <div
+                        key={`${message.id}-${i}-game-e`}
+                        className="mt-3 sm:mt-4 flex flex-col items-center justify-center p-3 sm:p-4 bg-red-500/10 rounded-xl border border-red-500/20 space-y-2 sm:space-y-3"
+                      >
+                        <AlertCircle className="text-red-400 h-5 w-5 sm:h-6 sm:w-6" />
+                        <p className="text-sm sm:text-base font-medium text-red-400">
+                          Failed to generate game
+                        </p>
+                        <p className="text-xs sm:text-sm text-zinc-400 text-center">
+                          There was an error during game generation. Please try
+                          again.
+                        </p>
+                      </div>
+                    );
+                  } else if (
+                    part.toolInvocation.result.status === "credit-error"
+                  ) {
+                    return (
+                      <div
+                        key={`${message.id}-${i}-game-e`}
+                        className="mt-3 sm:mt-4 flex flex-col items-center justify-center p-3 sm:p-4 bg-red-500/10 rounded-xl border border-red-500/20 space-y-2 sm:space-y-3"
+                      >
+                        <AlertCircle className="text-red-400 h-5 w-5 sm:h-6 sm:w-6" />
+                        <p className="text-sm sm:text-base font-medium text-red-400">
+                          Failed to generate game
+                        </p>
+                        <MemoizedMarkdown
+                          id={part.toolInvocation.toolCallId}
+                          content={part.toolInvocation.result.text}
+                        />
+                      </div>
+                    );
                   }
                 }
 
@@ -137,6 +171,22 @@ const Message = ({ message }: MessageProps) => {
                           There was an error during video generation. Please try
                           again.
                         </p>
+                      </div>
+                    );
+                  else if (part.toolInvocation.result.status === "credit-error")
+                    return (
+                      <div
+                        key={`${message.id}-${i}-video-e`}
+                        className="mt-3 sm:mt-4 flex flex-col items-center justify-center p-3 sm:p-4 bg-red-500/10 rounded-xl border border-red-500/20 space-y-2 sm:space-y-3"
+                      >
+                        <AlertCircle className="text-red-400 h-5 w-5 sm:h-6 sm:w-6" />
+                        <p className="text-sm sm:text-base font-medium text-red-400">
+                          Failed to generate video
+                        </p>
+                        <MemoizedMarkdown
+                          id={part.toolInvocation.toolCallId}
+                          content={part.toolInvocation.result.text}
+                        />
                       </div>
                     );
                 }
