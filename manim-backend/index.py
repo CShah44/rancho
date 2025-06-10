@@ -14,6 +14,8 @@ import dotenv
 import glob
 import time
 import re
+import shutil
+import pyttsx3
 
 dotenv.load_dotenv()
 
@@ -36,8 +38,6 @@ class ConceptRequest(BaseModel):
 def read_root():
     return {"Hello": "World"}
 
-
-# TODO: CLEANUP ERROR ONLY MAIN VIDEO IS CLEARED
 
 @app.post("/explain-concept")
 async def explain_concept(request: ConceptRequest):
@@ -87,7 +87,6 @@ async def explain_concept(request: ConceptRequest):
                 Return only the Python code without any explanations or markdown.
                 Also provide a brief explanation of the visualization. Address the animation as visualization in explanation.
             """
-
 
             response = client.models.generate_content(
                 model="gemini-2.0-flash", contents=prompt, config={
@@ -144,21 +143,24 @@ async def explain_concept(request: ConceptRequest):
 
             # Use the first video file found
             video_path = video_files[0]
+            final_video_path = video_path
+            
+            # Try to add audio to the video
+            try:
+                final_video_path = await add_audio_to_video(video_path, request.description, request_id, temp_base_dir)
+            except Exception as audio_error:
+                print(f"Audio generation failed: {audio_error}. Proceeding with original video.")
+                # Continue with original video if audio fails
             
             # Upload to Cloudinary
             upload_result = cloudinary.uploader.upload(
-                video_path,
+                final_video_path,
                 resource_type="video",
                 folder="concept_explanations"
             )
             
-            # Cleanup the generated files
-            os.remove(script_path)
-            for video_file in video_files:
-                try:
-                    os.remove(video_file)
-                except:
-                    pass
+            # Cleanup all generated files
+            cleanup_files(script_path, media_dir, request_id)
             
             # Return the URL of the uploaded video
             return {
@@ -173,13 +175,11 @@ async def explain_concept(request: ConceptRequest):
             
             # Clean up any files that might have been created in this attempt
             try:
-                if 'script_path' in locals() and os.path.exists(script_path):
-                    os.remove(script_path)
-                
-                if 'video_files' in locals():
-                    for video_file in video_files:
-                        if os.path.exists(video_file):
-                            os.remove(video_file)
+                cleanup_files(
+                    locals().get('script_path'),
+                    locals().get('media_dir'),
+                    request_id
+                )
             except:
                 pass
             
@@ -191,6 +191,121 @@ async def explain_concept(request: ConceptRequest):
     raise HTTPException(status_code=500, detail=f"Failed after {max_attempts} attempts. Last error: {last_error}")
 
 
+async def add_audio_to_video(video_path, concept_description, request_id, temp_base_dir):
+    """Add audio narration to the video using Gemini for transcript and pyttsx3 for TTS"""
+    
+    # Upload video to Gemini for transcript generation
+    uploaded_file = None
+    try:
+        # Upload the video file to Gemini
+        uploaded_file = client.files.upload(file=video_path)
+        
+        # Generate transcript using Gemini
+        transcript_prompt = f"""
+        Watch this educational video about "{concept_description}" and generate a natural, engaging narration script.
+        
+        Requirements:
+        1. The narration should explain what's happening in the video step by step
+        2. Use clear, educational language suitable for learning
+        3. Time the narration to match the video pacing (don't rush)
+        4. Include natural pauses where appropriate
+        5. Make it engaging and informative
+        6. Make it as short and concise as possible while still being informative
+        7. Avoid filler words and unnecessary repetition
+        
+        Return only the narration text without any formatting or timestamps.
+        """
+        
+        transcript_response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[uploaded_file, transcript_prompt]
+        )
+        
+        transcript = transcript_response.text.strip()
+        
+        # Generate audio using pyttsx3
+        audio_path = os.path.join(temp_base_dir, f"audio_{request_id}.wav")
+        
+        # Initialize TTS engine
+        tts_engine = pyttsx3.init()
+        
+        # Set properties for better quality
+        tts_engine.setProperty('rate', 150)  # Speed of speech
+        tts_engine.setProperty('volume', 0.9)  # Volume level
+        
+        # Get available voices and set a clear one if possible
+        voices = tts_engine.getProperty('voices')
+        if voices:
+            # Try to find a good voice (prefer female voices as they're often clearer)
+            for voice in voices:
+                if 'female' in voice.name.lower() or 'woman' in voice.name.lower():
+                    tts_engine.setProperty('voice', voice.id)
+                    break
+            else:
+                # If no female voice found, use the first available voice
+                tts_engine.setProperty('voice', voices[0].id)
+        
+        # Save audio to file
+        tts_engine.save_to_file(transcript, audio_path)
+        tts_engine.runAndWait()
+        
+        # Combine video and audio using ffmpeg
+        output_video_path = os.path.join(temp_base_dir, f"final_video_{request_id}.mp4")
+        
+        ffmpeg_result = subprocess.run([
+            "ffmpeg", "-i", video_path, "-i", audio_path,
+            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            "-y", output_video_path
+        ], capture_output=True, text=True)
+        
+        if ffmpeg_result.returncode != 0:
+            raise Exception(f"FFmpeg failed: {ffmpeg_result.stderr}")
+        
+        # Clean up temporary audio file
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+        
+        return output_video_path
+        
+    except Exception as e:
+        print(f"Error in add_audio_to_video: {e}")
+        raise e
+    finally:
+        # Clean up uploaded file from Gemini
+        if uploaded_file:
+            try:
+                client.files.delete(name=uploaded_file.name)
+            except Exception as cleanup_error:
+                print(f"Failed to cleanup uploaded file from Gemini: {cleanup_error}")
+
+
+def cleanup_files(script_path, media_dir, request_id):
+    """Clean up all generated files including the entire concept folder"""
+    try:
+        # Remove the script file
+        if script_path and os.path.exists(script_path):
+            os.remove(script_path)
+        
+        # Remove the entire concept folder from media directory
+        if media_dir:
+            concept_folder = os.path.join(media_dir, "videos", f"concept_{request_id}")
+            if os.path.exists(concept_folder):
+                shutil.rmtree(concept_folder)
+        
+        # Clean up any final video files in temp directory
+        temp_base_dir = os.path.join(os.path.expanduser("~"), "manim_temp")
+        final_video_pattern = os.path.join(temp_base_dir, f"final_video_{request_id}.mp4")
+        audio_pattern = os.path.join(temp_base_dir, f"audio_{request_id}.wav")
+        
+        for pattern in [final_video_pattern, audio_pattern]:
+            for file_path in glob.glob(pattern):
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+
+
 class VideoRequest(BaseModel):
     video_url: str
 
@@ -200,7 +315,7 @@ async def delete_video(request: VideoRequest):
     try:
         # Extract the public_id from the Cloudinary URL
         # Cloudinary URLs typically look like: https://res.cloudinary.com/cloud_name/video/upload/v1234567890/folder/public_id.mp4
-        match = re.search(r'upload/v\d+/(.+)\.\w+$', video_url)
+        match = re.search(r'upload/v\d+/(.+)\.\w+', video_url)
         if not match:
             raise HTTPException(status_code=400, detail="Invalid Cloudinary URL format")
         
