@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { SidebarCreditSection } from "./sidebar-credit-section";
 
 export function AppSidebar() {
   const { data: session } = useSession();
@@ -81,6 +82,11 @@ export function AppSidebar() {
           <SidebarHistory user={user} />
         </SidebarContent>
         <SidebarFooter className="border-t border-zinc-800 bg-zinc-900">
+          {/* Add credit section */}
+          <div className="border-t pt-4 mt-4">
+            <SidebarCreditSection />
+          </div>
+
           {user && <SidebarUserNav user={user} />}
         </SidebarFooter>
       </Sidebar>

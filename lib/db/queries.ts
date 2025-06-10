@@ -1,5 +1,12 @@
 import { db } from ".";
-import { chat, message, type DBMessage, type Chat } from "./schema";
+import {
+  chat,
+  message,
+  users,
+  type DBMessage,
+  type Chat,
+  CREDIT_COSTS,
+} from "./schema";
 import {
   and,
   asc,
@@ -11,6 +18,9 @@ import {
   lt,
   type SQL,
 } from "drizzle-orm";
+
+// Add this import for credit operations
+import { deductCredits } from "./credit-queries";
 
 export async function saveChat({
   id,
@@ -294,6 +304,68 @@ export async function updateChatTitle({
     return updatedChat;
   } catch (error) {
     console.error("Failed to update chat title in database");
+    throw error;
+  }
+}
+
+export async function deductCreditsForVideo({
+  userId,
+  chatId,
+}: {
+  userId: string;
+  chatId: string;
+}) {
+  try {
+    return await deductCredits({
+      userId,
+      amount: CREDIT_COSTS.VIDEO,
+      description: "Video generation",
+      relatedId: chatId,
+    });
+  } catch (error) {
+    console.error("Failed to deduct credits for video generation");
+    throw error;
+  }
+}
+
+export async function deductCreditsForGame({
+  userId,
+  chatId,
+}: {
+  userId: string;
+  chatId: string;
+}) {
+  try {
+    return await deductCredits({
+      userId,
+      amount: CREDIT_COSTS.GAME,
+      description: "Game generation",
+      relatedId: chatId,
+    });
+  } catch (error) {
+    console.error("Failed to deduct credits for game generation");
+    throw error;
+  }
+}
+
+// Get user with credits
+export async function getUserWithCredits(userId: string) {
+  try {
+    const [user] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        image: users.image,
+        credits: users.credits,
+        totalCreditsPurchased: users.totalCreditsPurchased,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    return user;
+  } catch (error) {
+    console.error("Failed to get user with credits");
     throw error;
   }
 }

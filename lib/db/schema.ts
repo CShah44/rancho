@@ -8,6 +8,7 @@ import {
   primaryKey,
   boolean,
   integer,
+  decimal,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { InferSelectModel } from "drizzle-orm";
@@ -20,7 +21,9 @@ export const users = pgTable("user", {
   email: text("email").unique(),
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
-  credits: integer("credits").notNull().default(50),
+  credits: integer("credits").notNull().default(100), // Updated default
+  totalCreditsPurchased: integer("totalCreditsPurchased").notNull().default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
 export type User = InferSelectModel<typeof users>;
@@ -124,3 +127,68 @@ export const message = pgTable("Message", {
 });
 
 export type DBMessage = InferSelectModel<typeof message>;
+
+// New tables for credit system
+export const creditPackages = pgTable("creditPackages", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  credits: integer("credits").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("INR"),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export type CreditPackage = InferSelectModel<typeof creditPackages>;
+
+export const creditTransactions = pgTable("creditTransactions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { enum: ["purchase", "usage", "bonus"] }).notNull(),
+  amount: integer("amount").notNull(), // Positive for credit, negative for debit
+  description: text("description").notNull(),
+  relatedId: text("relatedId"), // chatId for usage, paymentId for purchase
+  balanceAfter: integer("balanceAfter").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
+
+export const paymentTransactions = pgTable("paymentTransactions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  razorpayOrderId: text("razorpayOrderId").notNull().unique(),
+  razorpayPaymentId: text("razorpayPaymentId"),
+  razorpaySignature: text("razorpaySignature"),
+  packageId: text("packageId")
+    .notNull()
+    .references(() => creditPackages.id),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("INR"),
+  status: varchar("status", {
+    enum: ["created", "pending", "completed", "failed", "cancelled"],
+  })
+    .notNull()
+    .default("created"),
+  creditsAwarded: integer("creditsAwarded").default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  completedAt: timestamp("completedAt", { mode: "date" }),
+});
+
+export type PaymentTransaction = InferSelectModel<typeof paymentTransactions>;
+
+// Credit costs configuration
+export const CREDIT_COSTS = {
+  VIDEO: 5,
+  GAME: 10,
+} as const;

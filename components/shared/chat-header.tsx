@@ -18,7 +18,7 @@ export default function PureChatHeader() {
     <header
       className={cn(
         "flex sticky top-0 py-2 sm:py-3 items-center px-3 sm:px-4 lg:px-6 gap-3 w-full",
-        "bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/50 z-50",
+        "bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/50",
         "shadow-sm"
       )}
     >
