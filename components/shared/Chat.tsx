@@ -63,6 +63,9 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
         if (tool.toolCall.toolName === "video") {
           toast("Video generation might take up a few minutes.");
         }
+        if (tool.toolCall.toolName === "game") {
+          toast("Always read the instructions carefully before playing!");
+        }
       },
     });
 

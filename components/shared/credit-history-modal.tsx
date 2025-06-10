@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Coins, TrendingUp, TrendingDown, X } from "lucide-react";
+import { Coins, TrendingUp, TrendingDown, X, Filter } from "lucide-react";
 import { format } from "date-fns";
 
 interface CreditTransaction {
@@ -19,12 +19,15 @@ interface CreditHistoryModalProps {
   onClose: () => void;
 }
 
+type FilterType = "all" | "purchase" | "usage" | "bonus";
+
 export function CreditHistoryModal({
   isOpen,
   onClose,
 }: CreditHistoryModalProps) {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterType>("all");
 
   useEffect(() => {
     if (isOpen) {
@@ -56,6 +59,11 @@ export function CreditHistoryModal({
     }
   };
 
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (filter === "all") return true;
+    return transaction.type === filter;
+  });
+
   const getTransactionIcon = (type: string) => {
     if (type === "purchase" || type === "bonus") {
       return <TrendingUp className="h-5 w-5 text-green-500" />;
@@ -74,6 +82,15 @@ export function CreditHistoryModal({
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
+  };
+
+  const getFilterButtonStyle = (filterType: FilterType) => {
+    const isActive = filter === filterType;
+    return `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+      isActive
+        ? "bg-blue-500 text-white shadow-md"
+        : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+    }`;
   };
 
   if (!isOpen) return null;
@@ -112,6 +129,42 @@ export function CreditHistoryModal({
           </button>
         </div>
 
+        {/* Filter Section */}
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Filter:</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilter("all")}
+                className={getFilterButtonStyle("all")}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter("purchase")}
+                className={getFilterButtonStyle("purchase")}
+              >
+                Purchases
+              </button>
+              <button
+                onClick={() => setFilter("usage")}
+                className={getFilterButtonStyle("usage")}
+              >
+                Usage
+              </button>
+              <button
+                onClick={() => setFilter("bonus")}
+                className={getFilterButtonStyle("bonus")}
+              >
+                Bonus
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-hidden">
           {loading ? (
@@ -119,22 +172,26 @@ export function CreditHistoryModal({
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
               <p className="mt-4 text-gray-500">Loading transactions...</p>
             </div>
-          ) : transactions.length === 0 ? (
+          ) : filteredTransactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="p-4 bg-gray-100 rounded-full mb-4">
                 <Coins className="h-12 w-12 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No transactions yet
+                {filter === "all"
+                  ? "No transactions yet"
+                  : `No ${filter} transactions`}
               </h3>
               <p className="text-gray-500">
-                Your credit transactions will appear here
+                {filter === "all"
+                  ? "Your credit transactions will appear here"
+                  : `Your ${filter} transactions will appear here`}
               </p>
             </div>
           ) : (
-            <div className="p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
+            <div className="p-6 overflow-y-auto max-h-[calc(85vh-200px)]">
               <div className="space-y-4">
-                {transactions.map((transaction) => (
+                {filteredTransactions.map((transaction) => (
                   <div
                     key={transaction.id}
                     className="group p-4 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-all duration-200 hover:shadow-md"
@@ -197,8 +254,9 @@ export function CreditHistoryModal({
           <div className="flex items-center justify-between text-sm text-gray-500">
             <p>All transactions are recorded and cannot be modified</p>
             <p>
-              {transactions.length} transaction
-              {transactions.length !== 1 ? "s" : ""} total
+              {filteredTransactions.length} transaction
+              {filteredTransactions.length !== 1 ? "s" : ""}
+              {filter !== "all" ? ` (${filter})` : " total"}
             </p>
           </div>
         </div>

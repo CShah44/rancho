@@ -189,7 +189,7 @@ export function CreditPurchaseModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
@@ -197,29 +197,31 @@ export function CreditPurchaseModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-in fade-in-0 zoom-in-95 duration-300">
+      <div className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-7xl max-h-[95vh] sm:max-h-[90vh] flex flex-col animate-in fade-in-0 zoom-in-95 duration-300 overflow-hidden">
         {/* Header */}
-        <div className="relative p-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-3xl text-white">
+        <div className="relative p-4 sm:p-6 lg:p-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 lg:top-6 lg:right-6 p-2 hover:bg-white/20 rounded-xl transition-colors"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
 
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-white/20 rounded-2xl">
-              <Coins className="h-8 w-8" />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 pr-12 sm:pr-0">
+            <div className="p-2 sm:p-3 bg-white/20 rounded-xl sm:rounded-2xl w-fit">
+              <Coins className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold">Purchase Credits</h2>
-              <p className="text-blue-100 text-lg">
+              <h2 className="text-2xl sm:text-3xl font-bold">
+                Purchase Credits
+              </h2>
+              <p className="text-blue-100 text-base sm:text-lg">
                 Choose the perfect plan for your needs
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-sm">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               <span>Instant activation</span>
@@ -236,14 +238,16 @@ export function CreditPurchaseModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-              <p className="mt-6 text-lg text-gray-600">Loading packages...</p>
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16">
+              <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-blue-500 border-t-transparent"></div>
+              <p className="mt-4 sm:mt-6 text-base sm:text-lg text-gray-600">
+                Loading packages...
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {packages.map((pkg) => {
                 const isPopular = pkg.id === getPopularPackage();
                 const bestValue = getBestValuePackage();
@@ -253,7 +257,7 @@ export function CreditPurchaseModal({
                 return (
                   <div
                     key={pkg.id}
-                    className={`relative group rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+                    className={`relative group rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
                       isPopular
                         ? "border-blue-500 bg-gradient-to-b from-blue-50 to-white shadow-lg"
                         : isBestValue
@@ -263,9 +267,9 @@ export function CreditPurchaseModal({
                   >
                     {/* Popular/Best Value Badge */}
                     {(isPopular || isBestValue) && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <div className="absolute -top-2 sm:-top-3 left-1/2 transform -translate-x-1/2">
                         <Badge
-                          className={`px-4 py-1 text-xs font-semibold ${
+                          className={`px-2 sm:px-4 py-1 text-xs font-semibold ${
                             isPopular
                               ? "bg-blue-500 text-white"
                               : "bg-green-500 text-white"
@@ -274,27 +278,33 @@ export function CreditPurchaseModal({
                           {isPopular ? (
                             <div className="flex items-center gap-1">
                               <Star className="h-3 w-3" />
-                              Most Popular
+                              <span className="hidden sm:inline">
+                                Most Popular
+                              </span>
+                              <span className="sm:hidden">Popular</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1">
                               <Zap className="h-3 w-3" />
-                              Best Value
+                              <span className="hidden sm:inline">
+                                Best Value
+                              </span>
+                              <span className="sm:hidden">Best</span>
                             </div>
                           )}
                         </Badge>
                       </div>
                     )}
 
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                       {/* Package Header */}
-                      <div className="text-center mb-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      <div className="text-center mb-4 sm:mb-6">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                           {pkg.name}
                         </h3>
-                        <div className="flex items-center justify-center gap-2 mb-3">
+                        <div className="flex items-center justify-center gap-2 mb-2 sm:mb-3">
                           <Coins
-                            className={`h-6 w-6 ${
+                            className={`h-5 w-5 sm:h-6 sm:w-6 ${
                               isPopular
                                 ? "text-blue-500"
                                 : isBestValue
@@ -302,25 +312,27 @@ export function CreditPurchaseModal({
                                 : "text-yellow-500"
                             }`}
                           />
-                          <span className="text-3xl font-bold text-gray-900">
+                          <span className="text-2xl sm:text-3xl font-bold text-gray-900">
                             {pkg.credits.toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">credits</p>
+                        <p className="text-xs sm:text-sm text-gray-500">
+                          credits
+                        </p>
                       </div>
 
                       {/* Price */}
-                      <div className="text-center mb-6">
-                        <div className="text-4xl font-bold text-gray-900 mb-1">
+                      <div className="text-center mb-4 sm:mb-6">
+                        <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
                           {formatPrice(pkg.price, pkg.currency)}
                         </div>
                       </div>
 
                       {/* Features */}
-                      <div className="space-y-3 mb-8">
-                        <div className="flex items-center gap-3 text-sm">
+                      <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8">
+                        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                           <div className="p-1 bg-green-100 rounded-full">
-                            <Check className="h-3 w-3 text-green-600" />
+                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
                           </div>
                           <span className="text-gray-700">
                             <span className="font-semibold">
@@ -329,9 +341,9 @@ export function CreditPurchaseModal({
                             video generations
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-sm">
+                        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                           <div className="p-1 bg-green-100 rounded-full">
-                            <Check className="h-3 w-3 text-green-600" />
+                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
                           </div>
                           <span className="text-gray-700">
                             <span className="font-semibold">
@@ -346,7 +358,7 @@ export function CreditPurchaseModal({
                       <Button
                         onClick={() => handlePurchase(pkg.id)}
                         disabled={isPurchasing}
-                        className={`w-full h-12 text-base font-semibold rounded-xl transition-all duration-200 ${
+                        className={`w-full h-10 sm:h-12 text-sm sm:text-base font-semibold rounded-lg sm:rounded-xl transition-all duration-200 ${
                           isPopular
                             ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl"
                             : isBestValue
@@ -355,14 +367,20 @@ export function CreditPurchaseModal({
                         }`}
                       >
                         {isPurchasing ? (
-                          <div className="flex items-center gap-3">
-                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                            Processing...
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-t-transparent"></div>
+                            <span className="hidden sm:inline">
+                              Processing...
+                            </span>
+                            <span className="sm:hidden">...</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5" />
-                            Purchase Now
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
+                            <span className="hidden sm:inline">
+                              Purchase Now
+                            </span>
+                            <span className="sm:hidden">Buy</span>
                           </div>
                         )}
                       </Button>
@@ -375,9 +393,9 @@ export function CreditPurchaseModal({
         </div>
 
         {/* Footer */}
-        <div className="p-8 bg-gray-50 rounded-b-3xl border-t border-gray-100">
-          <div className="text-center space-y-3">
-            <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
+        <div className="p-4 sm:p-6 lg:p-8 bg-gray-50 border-t border-gray-100">
+          <div className="text-center space-y-2 sm:space-y-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 text-xs sm:text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <span>SSL Secured</span>
@@ -391,12 +409,16 @@ export function CreditPurchaseModal({
                 <span>Instant Delivery</span>
               </div>
             </div>
-            <p className="text-sm text-gray-500">
-              Credits are added instantly to your account and never expire.
-              <br />
-              Video generation costs 5 credits • Game generation costs 10
-              credits
-            </p>
+            <div className="text-xs sm:text-sm text-gray-500 space-y-1">
+              <p>
+                Credits are added instantly to your account and never expire.
+              </p>
+              <p className="hidden sm:block">
+                Video generation costs 5 credits • Game generation costs 10
+                credits
+              </p>
+              <p className="sm:hidden">Video: 5 credits • Game: 10 credits</p>
+            </div>
           </div>
         </div>
       </div>
