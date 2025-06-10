@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, History, ChevronDown } from "lucide-react";
+import { Plus, History, ChevronDown, Coins } from "lucide-react";
 import { CreditBalance } from "./credit-balance";
 import { CreditPurchaseModal } from "./credit-purchase-modal";
 import { CreditHistoryModal } from "./credit-history-modal";
@@ -31,13 +31,26 @@ export function SidebarCreditSection() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="w-full justify-between p-2 h-auto">
-            <CreditBalance />
+            {/* <CreditBalance /> */}
+            <div className="flex items-center gap-2">
+              <Coins className="text-yellow-300 h-4 w-4" />
+              <span>Manage Credits</span>
+            </div>
             <ChevronDown className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuLabel>Credit Management</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {/* Display credit balance */}
+          <div className="px-2 py-1 text-xs ">
+            <div className="flex items-center gap-2">
+              <CreditBalance className="text-sm" />
+            </div>
+          </div>
+
           <DropdownMenuSeparator />
 
           <DropdownMenuItem onClick={() => setShowPurchaseModal(true)}>
