@@ -23,6 +23,7 @@ interface CreditPurchaseModalProps {
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Razorpay: any;
   }
 }
@@ -110,6 +111,7 @@ export function CreditPurchaseModal({
         name: "Rancho Credits",
         description: `Purchase ${orderData.packageName}`,
         order_id: orderData.orderId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: async (response: any) => {
           try {
             // Verify payment

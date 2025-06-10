@@ -229,6 +229,7 @@ export async function updatePaymentTransaction({
   creditsAwarded?: number;
 }): Promise<PaymentTransaction> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
       status,
       ...(razorpayPaymentId && { razorpayPaymentId }),
