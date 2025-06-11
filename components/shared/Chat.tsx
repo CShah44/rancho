@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { MessageCircle, Globe, X } from "lucide-react";
+import { MessageCircle, Globe, X, StopCircle } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Message from "./Message";
-import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
+import { Paperclip, SendHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message as M } from "@ai-sdk/react";
 import { toast } from "sonner";
@@ -46,28 +46,35 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, status, error } =
-    useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    status,
+    error,
+    stop,
+  } = useChat({
+    id: chatId,
+    api: "/api/chat",
+    initialMessages,
+    body: {
       id: chatId,
-      api: "/api/chat",
-      initialMessages,
-      body: {
-        id: chatId,
-        search: mode === "search",
-      },
-      onError: (e) => {
-        console.log(e);
-        toast.error("Something went wrong. Please try again.");
-      },
-      onToolCall: (tool) => {
-        if (tool.toolCall.toolName === "video") {
-          toast("Video generation might take up a few minutes.");
-        }
-        if (tool.toolCall.toolName === "game") {
-          toast("Always read the instructions carefully before playing!");
-        }
-      },
-    });
+      search: mode === "search",
+    },
+    onError: (e) => {
+      console.log(e);
+      toast.error("Something went wrong. Please try again.");
+    },
+    onToolCall: (tool) => {
+      if (tool.toolCall.toolName === "video") {
+        toast("Video generation might take up a few minutes.");
+      }
+      if (tool.toolCall.toolName === "game") {
+        toast("Always read the instructions carefully before playing!");
+      }
+    },
+  });
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -193,7 +200,7 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
               {timeGreeting}, {user.name}!
             </h1>
             <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-zinc-300 max-w-4xl mx-auto leading-relaxed">
-              I&apos;m Rancho and I&apos;m here to revolutionize how you learn.
+              I&apos;m Rancho and I&apos;m here to change how you learn.
             </p>
           </div>
           <p className="text-xs sm:text-sm text-zinc-500 italic mt-4 sm:mt-6">
@@ -315,17 +322,23 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
                 />
               </Button>
 
-              <Button
-                type="submit"
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
-                disabled={status === "streaming" || !input.trim()}
-              >
-                {status === "streaming" ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
+              {status === "streaming" ? (
+                <Button onClick={() => stop()}>
+                  <StopCircle
+                    className="text-red-500"
+                    size={18}
+                    aria-label="Stop generation"
+                  />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
+                  disabled={status === "submitted"}
+                >
                   <SendHorizontal size={18} />
-                )}
-              </Button>
+                </Button>
+              )}
             </form>
 
             {/* Mode selector */}
