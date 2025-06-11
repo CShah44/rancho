@@ -190,7 +190,6 @@ async def explain_concept(request: ConceptRequest):
     # If we've exhausted all attempts, raise an exception
     raise HTTPException(status_code=500, detail=f"Failed after {max_attempts} attempts. Last error: {last_error}")
 
-
 async def add_audio_to_video(video_path, concept_description, request_id, temp_base_dir):
     """Add audio narration to the video using Gemini for transcript and pyttsx3 for TTS"""
     
@@ -199,6 +198,36 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
     try:
         # Upload the video file to Gemini
         uploaded_file = client.files.upload(file=video_path)
+        
+        # Wait for the file to be in ACTIVE state
+        print(f"Uploaded file: {uploaded_file.name}, waiting for ACTIVE state...")
+        max_wait_time = 60  # 1 minute maximum wait time
+        wait_interval = 2    # Check every 2 seconds
+        elapsed_time = 0
+        
+        while elapsed_time < max_wait_time:
+            try:
+                # Get the current file status
+                file_status = client.files.get(name=uploaded_file.name)
+                print(f"File state: {file_status.state}, elapsed time: {elapsed_time}s")
+                
+                if file_status.state == "ACTIVE":
+                    print("File is now ACTIVE, proceeding with transcript generation...")
+                    break
+                elif file_status.state == "FAILED":
+                    raise Exception(f"File processing failed: {uploaded_file.name}")
+                
+                # Wait before checking again
+                time.sleep(wait_interval)
+                elapsed_time += wait_interval
+                
+            except Exception as status_error:
+                print(f"Error checking file status: {status_error}")
+                time.sleep(wait_interval)
+                elapsed_time += wait_interval
+        
+        if elapsed_time >= max_wait_time:
+            raise Exception(f"File did not become ACTIVE within {max_wait_time} seconds")
         
         # Generate transcript using Gemini
         transcript_prompt = f"""
@@ -222,6 +251,7 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         )
         
         transcript = transcript_response.text.strip()
+        print(f"Generated transcript: {transcript[:100]}...")
         
         # Generate audio using pyttsx3
         audio_path = os.path.join(temp_base_dir, f"audio_{request_id}.wav")
@@ -249,6 +279,12 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         tts_engine.save_to_file(transcript, audio_path)
         tts_engine.runAndWait()
         
+        # Verify audio file was created
+        if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+            raise Exception("Audio file was not generated properly")
+        
+        print(f"Audio file generated: {audio_path}")
+        
         # Combine video and audio using ffmpeg
         output_video_path = os.path.join(temp_base_dir, f"final_video_{request_id}.mp4")
         
@@ -260,6 +296,12 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         
         if ffmpeg_result.returncode != 0:
             raise Exception(f"FFmpeg failed: {ffmpeg_result.stderr}")
+        
+        # Verify final video was created
+        if not os.path.exists(output_video_path) or os.path.getsize(output_video_path) == 0:
+            raise Exception("Final video file was not generated properly")
+        
+        print(f"Final video with audio created: {output_video_path}")
         
         # Clean up temporary audio file
         if os.path.exists(audio_path):
@@ -274,10 +316,10 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         # Clean up uploaded file from Gemini
         if uploaded_file:
             try:
+                print(f"Cleaning up uploaded file: {uploaded_file.name}")
                 client.files.delete(name=uploaded_file.name)
             except Exception as cleanup_error:
                 print(f"Failed to cleanup uploaded file from Gemini: {cleanup_error}")
-
 
 def cleanup_files(script_path, media_dir, request_id):
     """Clean up all generated files including the entire concept folder"""
