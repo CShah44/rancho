@@ -37,7 +37,7 @@ const plans = [
   {
     name: "Business Pack",
     credits: 1000,
-    price: "₹1,799",
+    price: "₹1,399",
     popular: false,
     bestValue: false,
     features: ["200 Video Generations", "100 Game Generations"],

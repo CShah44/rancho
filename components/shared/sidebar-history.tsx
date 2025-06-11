@@ -189,7 +189,7 @@ function LoadingSkeleton() {
             <div className="h-4 w-4 rounded-full bg-zinc-700/60" />
             <div
               className="h-4 rounded-md bg-zinc-700/60"
-              style={{ width: `${Math.floor(Math.random() * 40) + 50}%` }}
+              style={{ width: "70%" }}
             />
           </div>
         ))}
