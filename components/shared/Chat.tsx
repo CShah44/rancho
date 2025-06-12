@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { MessageCircle, Globe, X, StopCircle } from "lucide-react";
+import { MessageCircle, Globe, X, Loader2Icon } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,35 +46,28 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    status,
-    error,
-    stop,
-  } = useChat({
-    id: chatId,
-    api: "/api/chat",
-    initialMessages,
-    body: {
+  const { messages, input, handleInputChange, handleSubmit, status, error } =
+    useChat({
       id: chatId,
-      search: mode === "search",
-    },
-    onError: (e) => {
-      console.log(e);
-      toast.error("Something went wrong. Please try again.");
-    },
-    onToolCall: (tool) => {
-      if (tool.toolCall.toolName === "video") {
-        toast("Video generation might take up a few minutes.");
-      }
-      if (tool.toolCall.toolName === "game") {
-        toast("Always read the instructions carefully before playing!");
-      }
-    },
-  });
+      api: "/api/chat",
+      initialMessages,
+      body: {
+        id: chatId,
+        search: mode === "search",
+      },
+      onError: (e) => {
+        console.log(e);
+        toast.error("Something went wrong. Please try again.");
+      },
+      onToolCall: (tool) => {
+        if (tool.toolCall.toolName === "video") {
+          toast("Video generation might take up a few minutes.");
+        }
+        if (tool.toolCall.toolName === "game") {
+          toast("Always read the instructions carefully before playing!");
+        }
+      },
+    });
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -322,22 +315,17 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
                 />
               </Button>
 
-              {status === "streaming" ? (
-                <Button
-                  onClick={() => stop()}
-                  className="bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-red-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
-                >
-                  <StopCircle size={18} aria-label="Stop generation" />
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
-                  disabled={status === "submitted"}
-                >
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
+                disabled={status === "streaming"}
+              >
+                {status === "streaming" ? (
+                  <Loader2Icon size={18} className="animate-spin" />
+                ) : (
                   <SendHorizontal size={18} />
-                </Button>
-              )}
+                )}
+              </Button>
             </form>
 
             {/* Mode selector */}
