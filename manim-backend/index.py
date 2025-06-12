@@ -53,7 +53,7 @@ async def explain_concept(request: ConceptRequest):
             
             # Enhanced prompt with stricter requirements and better guidance
             prompt = f"""
-                Generate Manim code to create a detailed, educational animation explaining this concept: {request.description}
+                Generate Manim code to create a detailed, educational animation explaining the concepts requested.
                 Use your creativity and artistic flair to make the animation visually appealing and engaging. At the same time
                 the concepts should be clear and easy to understand. The animation should be suitable for educational purposes.
 
@@ -89,7 +89,8 @@ async def explain_concept(request: ConceptRequest):
             """
 
             response = client.models.generate_content(
-                model="gemini-2.0-flash", contents=prompt, config={
+                model="gemini-2.5-flash-preview-05-20", contents=request.description, config={
+                    'system_instruction': prompt,
                     'response_mime_type': 'application/json',
                     'response_schema':  {
                         "type": "object",

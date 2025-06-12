@@ -179,7 +179,7 @@ const Message = ({ message }: MessageProps) => {
                             </p>
                             <p className="text-xs sm:text-sm text-zinc-400 text-center">
                               There was an error during game generation. Please
-                              try again.
+                              try again. (No Credits Charged)
                             </p>
                           </div>
                         );
@@ -228,7 +228,7 @@ const Message = ({ message }: MessageProps) => {
                             </p>
                             <p className="text-xs sm:text-sm text-zinc-400 text-center">
                               There was an error during video generation. Please
-                              try again.
+                              try again. (No Credits Charged)
                             </p>
                           </div>
                         );

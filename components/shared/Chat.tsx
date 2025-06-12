@@ -323,12 +323,11 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
               </Button>
 
               {status === "streaming" ? (
-                <Button onClick={() => stop()}>
-                  <StopCircle
-                    className="text-red-500"
-                    size={18}
-                    aria-label="Stop generation"
-                  />
+                <Button
+                  onClick={() => stop()}
+                  className="bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-red-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
+                >
+                  <StopCircle size={18} aria-label="Stop generation" />
                 </Button>
               ) : (
                 <Button
