@@ -19,6 +19,8 @@ import { generateTitleFromUserMessage } from "./actions";
 import { getMostRecentUserMessage, getTrailingMessageId } from "@/lib/utils";
 import { generateP5Code } from "@/app/game/actions";
 
+export const maxDuration = 300;
+
 export async function POST(req: Request) {
   try {
     const { messages, search, id } = await req.json();
