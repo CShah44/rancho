@@ -417,12 +417,10 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         logger.info("Generating transcript with Gemini...")
         transcript_prompt = f"""
         Watch this educational video about "{concept_description}" and generate a natural, engaging narration script.
-        The video is approximately {video_duration} seconds long.
-        
+
         Requirements:
         1. The narration should explain what's happening in the video step by step
         2. Use clear, educational language suitable for learning
-        3. Generate enough content to fill at least {max(20, video_duration * 0.8)} seconds of speech
         4. Include natural pauses where appropriate
         5. Make it engaging and informative
         6. Avoid filler words and unnecessary repetition
