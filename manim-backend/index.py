@@ -89,7 +89,7 @@ async def explain_concept(request: ConceptRequest):
             """
 
             response = client.models.generate_content(
-                model="gemini-2.5-flash-preview-05-20", contents=request.description, config={
+                model="gemini-2.0-flash", contents=request.description, config={
                     'system_instruction': prompt,
                     'response_mime_type': 'application/json',
                     'response_schema':  {
