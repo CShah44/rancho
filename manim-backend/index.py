@@ -358,6 +358,23 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
     logger.info(f"=== Starting audio generation ===")
     logger.info(f"Input video: {video_path}")
     
+    # First, get video duration for reference
+    try:
+        ffprobe_result = subprocess.run([
+            "ffprobe", "-v", "quiet", "-show_entries", "format=duration", 
+            "-of", "csv=p=0", video_path
+        ], capture_output=True, text=True)
+        
+        if ffprobe_result.returncode == 0:
+            video_duration = float(ffprobe_result.stdout.strip())
+            logger.info(f"Original video duration: {video_duration} seconds")
+        else:
+            logger.warning("Could not determine video duration")
+            video_duration = 30.0  # Default fallback
+    except Exception as e:
+        logger.error(f"Error getting video duration: {e}")
+        video_duration = 30.0
+    
     # Upload video to Gemini for transcript generation
     uploaded_file = None
     try:
@@ -400,17 +417,19 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         logger.info("Generating transcript with Gemini...")
         transcript_prompt = f"""
         Watch this educational video about "{concept_description}" and generate a natural, engaging narration script.
+        The video is approximately {video_duration} seconds long.
         
         Requirements:
         1. The narration should explain what's happening in the video step by step
         2. Use clear, educational language suitable for learning
-        3. Time the narration to match the video pacing (don't rush)
+        3. Generate enough content to fill at least {max(20, video_duration * 0.8)} seconds of speech
         4. Include natural pauses where appropriate
         5. Make it engaging and informative
-        6. Make it as short and concise as possible while still being informative
-        7. Avoid filler words and unnecessary repetition
+        6. Avoid filler words and unnecessary repetition
+        7. The script should be substantial enough for a proper educational narration
         
         Return only the narration text without any formatting or timestamps.
+        Make sure the script is long enough to provide meaningful educational content.
         """
         
         transcript_response = client.models.generate_content(
@@ -419,40 +438,61 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         )
         
         transcript = transcript_response.text.strip()
-        logger.info(f"Generated transcript: {transcript[:100]}...")
+        logger.info(f"Generated transcript length: {len(transcript)} characters")
+        logger.info(f"Generated transcript preview: {transcript[:200]}...")
+        
+        # Validate transcript length
+        if len(transcript) < 50:
+            logger.warning("Transcript too short, generating fallback")
+            transcript = f"This educational animation demonstrates the concept of {concept_description}. " \
+                        f"Watch carefully as we explore the key principles and applications. " \
+                        f"The visualization shows step-by-step how these concepts work in practice. " \
+                        f"Pay attention to the transitions and explanations provided throughout the animation."
         
         # Generate audio using pyttsx3
         audio_path = os.path.join(temp_base_dir, f"audio_{request_id}.wav")
         logger.info(f"Generating audio file: {audio_path}")
         
-        # Initialize TTS engine
-        tts_engine = pyttsx3.init()
+        # Initialize TTS engine with better error handling
+        try:
+            tts_engine = pyttsx3.init()
+            
+            # Set properties for better quality
+            tts_engine.setProperty('rate', 140)  # Slightly slower for clarity
+            tts_engine.setProperty('volume', 0.9)  # Volume level
+            
+            # Get available voices and set a clear one if possible
+            voices = tts_engine.getProperty('voices')
+            if voices:
+                logger.info(f"Available voices: {len(voices)}")
+                # Try to find a good voice
+                for voice in voices:
+                    logger.info(f"Voice: {voice.name} - {voice.id}")
+                    if 'female' in voice.name.lower() or 'woman' in voice.name.lower():
+                        tts_engine.setProperty('voice', voice.id)
+                        logger.info(f"Selected voice: {voice.name}")
+                        break
+                else:
+                    # If no female voice found, use the first available voice
+                    tts_engine.setProperty('voice', voices[0].id)
+                    logger.info(f"Selected default voice: {voices[0].name}")
+            
+            # Save audio to file
+            logger.info("Generating TTS audio...")
+            tts_engine.save_to_file(transcript, audio_path)
+            tts_engine.runAndWait()
+            
+            # Clean up TTS engine
+            try:
+                tts_engine.stop()
+            except:
+                pass
+                
+        except Exception as tts_error:
+            logger.error(f"TTS engine error: {tts_error}")
+            raise Exception(f"Failed to generate audio: {tts_error}")
         
-        # Set properties for better quality
-        tts_engine.setProperty('rate', 150)  # Speed of speech
-        tts_engine.setProperty('volume', 0.9)  # Volume level
-        
-        # Get available voices and set a clear one if possible
-        voices = tts_engine.getProperty('voices')
-        if voices:
-            logger.info(f"Available voices: {len(voices)}")
-            # Try to find a good voice (prefer female voices as they're often clearer)
-            for voice in voices:
-                if 'female' in voice.name.lower() or 'woman' in voice.name.lower():
-                    tts_engine.setProperty('voice', voice.id)
-                    logger.info(f"Selected voice: {voice.name}")
-                    break
-            else:
-                # If no female voice found, use the first available voice
-                tts_engine.setProperty('voice', voices[0].id)
-                logger.info(f"Selected default voice: {voices[0].name}")
-        
-        # Save audio to file
-        logger.info("Generating TTS audio...")
-        tts_engine.save_to_file(transcript, audio_path)
-        tts_engine.runAndWait()
-        
-        # Verify audio file was created
+        # Verify audio file was created and check its properties
         if not os.path.exists(audio_path):
             raise Exception("Audio file was not created")
         
@@ -462,17 +502,42 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         if audio_size == 0:
             raise Exception("Audio file is empty")
         
+        # Check audio duration
+        try:
+            ffprobe_audio_result = subprocess.run([
+                "ffprobe", "-v", "quiet", "-show_entries", "format=duration", 
+                "-of", "csv=p=0", audio_path
+            ], capture_output=True, text=True)
+            
+            if ffprobe_audio_result.returncode == 0:
+                audio_duration = float(ffprobe_audio_result.stdout.strip())
+                logger.info(f"Generated audio duration: {audio_duration} seconds")
+                
+                if audio_duration < 1.0:
+                    raise Exception(f"Audio duration too short: {audio_duration} seconds")
+            else:
+                logger.warning("Could not determine audio duration")
+                
+        except Exception as duration_error:
+            logger.error(f"Error checking audio duration: {duration_error}")
+        
         # Wait for audio file stability
         if not wait_for_file_stability(audio_path, max_wait=10):
             logger.warning("Audio file may not be completely written")
         
-        # Combine video and audio using ffmpeg
+        # Combine video and audio using ffmpeg with better options
         output_video_path = os.path.join(temp_base_dir, f"final_video_{request_id}.mp4")
         logger.info(f"Combining video and audio to: {output_video_path}")
         
+        # Use different FFmpeg strategy - don't use shortest, pad audio if needed
         ffmpeg_command = [
             "ffmpeg", "-i", video_path, "-i", audio_path,
-            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            "-c:v", "copy",  # Copy video stream as-is
+            "-c:a", "aac",   # Encode audio as AAC
+            "-b:a", "128k",  # Set audio bitrate
+            "-filter_complex", f"[1:a]apad=pad_dur={video_duration}[padded_audio]",  # Pad audio to video length
+            "-map", "0:v:0", "-map", "[padded_audio]",  # Map video and padded audio
+            "-shortest",     # Still use shortest but now audio is padded
             "-y", output_video_path
         ]
         logger.info(f"FFmpeg command: {' '.join(ffmpeg_command)}")
@@ -482,10 +547,24 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         logger.info(f"FFmpeg return code: {ffmpeg_result.returncode}")
         logger.info(f"FFmpeg stdout: {ffmpeg_result.stdout}")
         if ffmpeg_result.stderr:
-            logger.warning(f"FFmpeg stderr: {ffmpeg_result.stderr}")
+            logger.info(f"FFmpeg stderr: {ffmpeg_result.stderr}")
         
         if ffmpeg_result.returncode != 0:
-            raise Exception(f"FFmpeg failed: {ffmpeg_result.stderr}")
+            # Try fallback method without audio padding
+            logger.warning("FFmpeg with padding failed, trying fallback method...")
+            ffmpeg_fallback_command = [
+                "ffmpeg", "-i", video_path, "-i", audio_path,
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
+                "-map", "0:v:0", "-map", "1:a:0",
+                "-t", str(video_duration),  # Limit to video duration
+                "-y", output_video_path
+            ]
+            
+            ffmpeg_result = subprocess.run(ffmpeg_fallback_command, capture_output=True, text=True)
+            logger.info(f"Fallback FFmpeg return code: {ffmpeg_result.returncode}")
+            
+            if ffmpeg_result.returncode != 0:
+                raise Exception(f"FFmpeg failed: {ffmpeg_result.stderr}")
         
         # Verify final video was created
         if not os.path.exists(output_video_path):
@@ -496,6 +575,23 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
         
         if final_video_size == 0:
             raise Exception("Final video file is empty")
+        
+        # Check final video duration
+        try:
+            ffprobe_final_result = subprocess.run([
+                "ffprobe", "-v", "quiet", "-show_entries", "format=duration", 
+                "-of", "csv=p=0", output_video_path
+            ], capture_output=True, text=True)
+            
+            if ffprobe_final_result.returncode == 0:
+                final_duration = float(ffprobe_final_result.stdout.strip())
+                logger.info(f"Final video duration: {final_duration} seconds")
+                
+                if final_duration < video_duration * 0.5:
+                    logger.warning(f"Final video duration seems too short: {final_duration}s vs original {video_duration}s")
+            
+        except Exception as final_duration_error:
+            logger.error(f"Error checking final video duration: {final_duration_error}")
         
         # Wait for final video stability
         if not wait_for_file_stability(output_video_path, max_wait=15):
@@ -524,6 +620,7 @@ async def add_audio_to_video(video_path, concept_description, request_id, temp_b
                 logger.info("Gemini file cleanup completed")
             except Exception as cleanup_error:
                 logger.error(f"Failed to cleanup uploaded file from Gemini: {cleanup_error}")
+
 
 def cleanup_files(script_path, media_dir, request_id, temp_base_dir=None):
     """Clean up all generated files including the entire concept folder"""
