@@ -45,5 +45,5 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Expose port
 EXPOSE 8000
 
-# Use a startup script to handle PORT variable
-CMD ["sh", "-c", "uvicorn index:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 300"]
+# Use a startup script to handle PORT variable - DISABLE AUTO-RELOAD
+CMD ["sh", "-c", "uvicorn index:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 300 --no-reload"]
