@@ -73,11 +73,10 @@ export async function POST(req: Request) {
         - Include analogies and metaphors that make concepts relatable
         - Suggest visualization opportunities when explaining complex topics
         
-        You have access to four tools:
+        You have access to three tools:
         1. Video animations - These are high-quality educational animations that illustrate concepts dynamically (costs credits)
-        2. Images - These are static visuals that can help explain concepts or provide examples (free)
-        3. Quiz - Generate interactive quizzes to test understanding of concepts (free)
-        4. Game - Create interactive p5.js sketches and games to demonstrate scientific and mathematical concepts (costs credits)
+        2. Quiz - Generate interactive quizzes to test understanding of concepts (free)
+        3. Game - Create interactive p5.js sketches and games to demonstrate scientific and mathematical concepts (costs credits)
         
         Prioritize using video animations when explaining complex concepts that benefit from dynamic visualization. But always ask the student if they would like a video animation before generating one. (This will help manage credit usage.)
         Use images when a static visual would suffice or when specifically requested by the student.
@@ -197,87 +196,87 @@ export async function POST(req: Request) {
             }
           },
         },
-        image: {
-          description:
-            "Search for relevant educational images to illustrate concepts or provide visual examples. This tool is free to use.",
-          parameters: z.object(
-            {
-              query: z
-                .string()
-                .describe(
-                  "Specific search query describing the educational image needed. Be precise about the scientific or mathematical concept you want to illustrate."
-                ),
-            },
-            {
-              required_error: "Query is required",
-              invalid_type_error: "Query must be a string",
-            }
-          ),
-          execute: async ({ query }) => {
-            const myHeaders = new Headers();
-            myHeaders.append(
-              "X-API-KEY",
-              process.env.SERP_API_KEY || "serper.dev API key"
-            );
-            myHeaders.append("Content-Type", "application/json");
+        // image: {
+        //   description:
+        //     "Search for relevant educational images to illustrate concepts or provide visual examples. This tool is free to use.",
+        //   parameters: z.object(
+        //     {
+        //       query: z
+        //         .string()
+        //         .describe(
+        //           "Specific search query describing the educational image needed. Be precise about the scientific or mathematical concept you want to illustrate."
+        //         ),
+        //     },
+        //     {
+        //       required_error: "Query is required",
+        //       invalid_type_error: "Query must be a string",
+        //     }
+        //   ),
+        //   execute: async ({ query }) => {
+        //     const myHeaders = new Headers();
+        //     myHeaders.append(
+        //       "X-API-KEY",
+        //       process.env.SERP_API_KEY || "serper.dev API key"
+        //     );
+        //     myHeaders.append("Content-Type", "application/json");
 
-            const raw = JSON.stringify({
-              q: query,
-              gl: "in",
-            });
+        //     const raw = JSON.stringify({
+        //       q: query,
+        //       gl: "in",
+        //     });
 
-            try {
-              const response = await fetch("https://google.serper.dev/images", {
-                method: "POST",
-                headers: myHeaders,
-                body: raw,
-                redirect: "follow",
-              });
-              const result = await response.json();
+        //     try {
+        //       const response = await fetch("https://google.serper.dev/images", {
+        //         method: "POST",
+        //         headers: myHeaders,
+        //         body: raw,
+        //         redirect: "follow",
+        //       });
+        //       const result = await response.json();
 
-              if (!result || !result.images || result.images.length === 0) {
-                return {
-                  type: "text",
-                  text: "No relevant images found. Let me explain the concept differently.",
-                };
-              }
+        //       if (!result || !result.images || result.images.length === 0) {
+        //         return {
+        //           type: "text",
+        //           text: "No relevant images found. Let me explain the concept differently.",
+        //         };
+        //       }
 
-              // Return the top 3 images (or fewer if less are available)
-              interface Image {
-                imageUrl: string;
-                title: string;
-                imageWidth: number;
-                imageHeight: number;
-                thumbnailUrl: string;
-                thumbnailWidth: number;
-                thumbnailHeight: number;
-                source: string;
-                domain: string;
-                googleUrl: string;
-                position: number;
-                link: string;
-              }
+        //       // Return the top 3 images (or fewer if less are available)
+        //       interface Image {
+        //         imageUrl: string;
+        //         title: string;
+        //         imageWidth: number;
+        //         imageHeight: number;
+        //         thumbnailUrl: string;
+        //         thumbnailWidth: number;
+        //         thumbnailHeight: number;
+        //         source: string;
+        //         domain: string;
+        //         googleUrl: string;
+        //         position: number;
+        //         link: string;
+        //       }
 
-              const imagesToReturn: Image[] = result.images.slice(0, 5);
+        //       const imagesToReturn: Image[] = result.images.slice(0, 5);
 
-              return {
-                type: "image",
-                images: imagesToReturn.map((i) => {
-                  return {
-                    imageUrl: i.imageUrl,
-                    title: i.title,
-                  };
-                }),
-              };
-            } catch (error) {
-              console.error(error);
-              return {
-                type: "text",
-                text: "I couldn't retrieve images at the moment. Let me explain the concept differently.",
-              };
-            }
-          },
-        },
+        //       return {
+        //         type: "image",
+        //         images: imagesToReturn.map((i) => {
+        //           return {
+        //             imageUrl: i.imageUrl,
+        //             title: i.title,
+        //           };
+        //         }),
+        //       };
+        //     } catch (error) {
+        //       console.error(error);
+        //       return {
+        //         type: "text",
+        //         text: "I couldn't retrieve images at the moment. Let me explain the concept differently.",
+        //       };
+        //     }
+        //   },
+        // },
         quiz: {
           description:
             "Generate an interactive quiz to test understanding of scientific or mathematical concepts. This tool is free to use.",
