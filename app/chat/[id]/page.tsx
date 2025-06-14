@@ -45,7 +45,7 @@ export default async function ChatPage(props: {
   }
 
   return (
-    <div className="flex flex-col h-screen pt-4 pb-4 px-4 w-full">
+    <div className="flex w-full flex-col h-screen pt-4 pb-4">
       <Chat
         user={session.user}
         chatId={chat.id}

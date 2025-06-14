@@ -12,19 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, History, ChevronDown, Coins } from "lucide-react";
 import { CreditBalance } from "./credit-balance";
-import { CreditPurchaseModal } from "./credit-purchase-modal";
 import { CreditHistoryModal } from "./credit-history-modal";
+import { useRouter } from "next/navigation";
 
 export function SidebarCreditSection() {
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [creditBalance, setCreditBalance] = useState<number>(0);
-
-  const handlePurchaseComplete = (creditsAdded: number) => {
-    setCreditBalance((prev) => prev + creditsAdded);
-  };
-
-  console.log(creditBalance);
+  const router = useRouter();
 
   return (
     <>
@@ -53,7 +46,7 @@ export function SidebarCreditSection() {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onClick={() => setShowPurchaseModal(true)}>
+          <DropdownMenuItem onClick={() => router.push("/purchase")}>
             <Plus className="h-4 w-4 mr-2" />
             Purchase Credits
           </DropdownMenuItem>
@@ -71,12 +64,6 @@ export function SidebarCreditSection() {
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <CreditPurchaseModal
-        isOpen={showPurchaseModal}
-        onClose={() => setShowPurchaseModal(false)}
-        onPurchaseComplete={handlePurchaseComplete}
-      />
 
       <CreditHistoryModal
         isOpen={showHistoryModal}

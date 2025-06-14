@@ -139,14 +139,13 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
   }, [zoomLevel]);
 
   return (
-    <div className="my-4">
-      {/* Thumbnail Gallery */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+    <div className="my-3 sm:my-4">
+      {/* Responsive Thumbnail Gallery */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2 md:gap-3">
         {images.map((image) => (
           <div
             key={image.imageUrl}
-            className="relative aspect-square overflow-hidden rounded-md cursor-pointer group"
-            style={{ width: "100%", height: "200px" }} // Fixed height for thumbnails
+            className="relative aspect-square overflow-hidden rounded-lg sm:rounded-xl cursor-pointer group bg-zinc-800/50"
             onClick={() => openModal(image)}
           >
             <Image
@@ -154,11 +153,13 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
               alt={image.title}
               fill
               className="object-cover transition-transform duration-200 group-hover:scale-105"
-              sizes="(max-width: 768px) 50vw, 25vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-end">
-              <div className="p-2 w-full bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <p className="text-white text-xs truncate">{image.title}</p>
+              <div className="p-2 sm:p-3 w-full bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <p className="text-white text-xs sm:text-sm truncate font-medium">
+                  {image.title}
+                </p>
               </div>
             </div>
           </div>
@@ -168,26 +169,26 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
       {/* Modal for full-size image */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4 backdrop-blur-sm"
           onClick={handleBackdropClick}
         >
           <div
-            className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center"
+            className="relative max-w-[95vw] max-h-[95vh] sm:max-w-[90vw] sm:max-h-[90vh] w-full h-full flex items-center justify-center"
             onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing
           >
             {/* Image container with zoom, rotation and panning */}
             <div
               ref={imageContainerRef}
               className={cn(
-                "relative overflow-hidden",
+                "relative overflow-hidden flex items-center justify-center",
                 zoomLevel > 1 ? "cursor-grab" : "cursor-default",
                 isDragging && zoomLevel > 1 ? "cursor-grabbing" : ""
               )}
               style={{
                 maxWidth: "100%",
                 maxHeight: "100%",
-                width: "auto", // Added width auto
-                height: "auto", // Added height auto
+                width: "auto",
+                height: "auto",
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -208,61 +209,61 @@ const ImagesTool = ({ images }: { images: ImageItem[] }) => {
                   alt={selectedImage.title}
                   width={800}
                   height={600}
-                  className="max-h-[80vh] w-auto h-auto object-contain select-none"
+                  className="max-h-[70vh] sm:max-h-[80vh] w-auto h-auto object-contain select-none"
                   priority
                   draggable={false}
                 />
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-zinc-800/90 rounded-full px-4 py-2 backdrop-blur-sm">
+            {/* Responsive Controls */}
+            <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-1 sm:gap-2 bg-zinc-800/90 rounded-full px-3 sm:px-4 py-2 backdrop-blur-sm">
               <button
                 onClick={handleZoomOut}
-                className="p-2 rounded-full hover:bg-zinc-700 text-white transition-colors"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-700 text-white transition-colors"
                 aria-label="Zoom out"
               >
-                <ZoomOut size={20} />
+                <ZoomOut className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div className="text-white text-sm font-medium px-2">
+              <div className="text-white text-xs sm:text-sm font-medium px-2">
                 {Math.round(zoomLevel * 100)}%
               </div>
               <button
                 onClick={handleZoomIn}
-                className="p-2 rounded-full hover:bg-zinc-700 text-white transition-colors"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-700 text-white transition-colors"
                 aria-label="Zoom in"
               >
-                <ZoomIn size={20} />
+                <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div className="w-px h-6 bg-zinc-600 mx-1"></div>
+              <div className="w-px h-4 sm:h-6 bg-zinc-600 mx-1"></div>
               <button
                 onClick={handleRotate}
-                className="p-2 rounded-full hover:bg-zinc-700 text-white transition-colors"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-700 text-white transition-colors"
                 aria-label="Rotate image"
               >
-                <RotateCw size={20} />
+                <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
             {/* Close button */}
             <button
               onClick={closeModal}
-              className="absolute top-2 right-2 p-2 rounded-full bg-zinc-800/90 text-white hover:bg-zinc-700 transition-colors"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 p-1.5 sm:p-2 rounded-full bg-zinc-800/90 text-white hover:bg-zinc-700 transition-colors"
               aria-label="Close modal"
             >
-              <X size={20} />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
             {/* Image title */}
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-zinc-800/90 rounded-full px-4 py-2 backdrop-blur-sm">
-              <p className="text-white text-sm font-medium">
+            <div className="absolute top-2 sm:top-4 left-1/2 transform -translate-x-1/2 bg-zinc-800/90 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 backdrop-blur-sm max-w-[80vw]">
+              <p className="text-white text-xs sm:text-sm font-medium truncate">
                 {selectedImage.title}
               </p>
             </div>
 
             {/* Pan instruction - only show when zoomed */}
             {zoomLevel > 1 && (
-              <div className="absolute top-16 left-1/2 transform -translate-x-1/2 bg-zinc-800/70 rounded-full px-3 py-1 backdrop-blur-sm opacity-70">
+              <div className="absolute top-12 sm:top-16 left-1/2 transform -translate-x-1/2 bg-zinc-800/70 rounded-full px-2 sm:px-3 py-1 backdrop-blur-sm opacity-70">
                 <p className="text-white text-xs">Drag to pan</p>
               </div>
             )}

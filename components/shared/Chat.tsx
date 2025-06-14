@@ -160,11 +160,11 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
     }, [dots.length]);
 
     return (
-      <div className="flex justify-center px-3 sm:px-4">
-        <div className="bg-zinc-800/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl max-w-[90%] sm:max-w-[85%] shadow-lg border border-zinc-700/40">
-          <div className="flex items-center space-x-3">
+      <div className="flex justify-center px-2 sm:px-4">
+        <div className="bg-zinc-800/90 backdrop-blur-sm p-3 sm:p-4 rounded-2xl max-w-[95%] sm:max-w-[85%] shadow-lg border border-zinc-700/40">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="relative">
-              <div className="animate-pulse text-xl sm:text-2xl">
+              <div className="animate-pulse text-lg sm:text-xl md:text-2xl">
                 {dots[dotIndex]}
               </div>
             </div>
@@ -183,16 +183,16 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
   };
 
   return (
-    <div className="flex flex-col h-dvh bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+    <div className="flex w-full flex-col h-dvh bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
       <PureChatHeader />
 
       {messages.length <= 0 ? (
         <div className="flex-1 flex flex-col justify-center items-center text-center space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
           <div className="space-y-3 sm:space-y-4">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white font-grotesk tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white font-grotesk tracking-tight leading-tight">
               {timeGreeting}, {user.name}!
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-zinc-300 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-zinc-300 max-w-4xl mx-auto leading-relaxed">
               I&apos;m Rancho and I&apos;m here to change how you learn.
             </p>
           </div>
@@ -205,14 +205,14 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
           className="flex-1 overflow-y-auto px-2 sm:px-4 lg:px-6"
           style={{ scrollbarWidth: "none" }}
         >
-          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 py-4 sm:py-6 ">
+          <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4 md:space-y-6 py-3 sm:py-4 md:py-6">
             {messages.map((message) => (
               <Message key={message.id} message={message} />
             ))}
             {status === "streaming" && <ThinkingAnimation />}
             {error && (
-              <div className="flex justify-center px-3 sm:px-4">
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 sm:p-4 rounded-xl max-w-[90%] sm:max-w-[85%] text-sm sm:text-base">
+              <div className="flex justify-center px-2 sm:px-4">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 sm:p-4 rounded-xl max-w-[95%] sm:max-w-[85%] text-sm sm:text-base">
                   An error occurred. Please try again.
                 </div>
               </div>
@@ -222,18 +222,18 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
         </div>
       )}
 
-      {/* Enhanced input area */}
+      {/* Enhanced responsive input area */}
       <div className="border-t border-zinc-800/50 bg-zinc-900/50 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto p-3 sm:p-4 lg:p-6">
-          <div className="bg-zinc-800/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-zinc-700/40 shadow-2xl">
+        <div className="max-w-4xl mx-auto p-2 sm:p-3 md:p-4 lg:p-6">
+          <div className="bg-zinc-800/60 backdrop-blur-sm rounded-xl sm:rounded-2xl md:rounded-3xl border border-zinc-700/40 shadow-2xl">
             {/* File previews */}
             {filePreviews.length > 0 && (
-              <div className="p-3 sm:p-4 border-b border-zinc-700/30">
-                <div className="flex flex-wrap gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 md:p-4 border-b border-zinc-700/30">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 md:gap-3">
                   {filePreviews.map((file) => (
                     <div key={file.name} className="relative group">
                       {file.type.startsWith("image/") ? (
-                        <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-zinc-600/50">
+                        <div className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-lg overflow-hidden border border-zinc-600/50">
                           <Image
                             width={64}
                             height={64}
@@ -243,27 +243,36 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
                           />
                           <button
                             onClick={() => removeFile(file.name)}
-                            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 p-0.5 sm:p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200"
                             aria-label="Remove file"
                           >
-                            <X size={10} className="text-white" />
+                            <X
+                              size={8}
+                              className="sm:w-2.5 sm:h-2.5 text-white"
+                            />
                           </button>
                         </div>
                       ) : (
-                        <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center bg-zinc-700/60 rounded-lg border border-zinc-600/50">
-                          <Paperclip size={16} className="text-zinc-400" />
+                        <div className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 flex items-center justify-center bg-zinc-700/60 rounded-lg border border-zinc-600/50">
+                          <Paperclip
+                            size={12}
+                            className="sm:w-4 sm:h-4 text-zinc-400"
+                          />
                           <button
                             onClick={() => removeFile(file.name)}
-                            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200"
+                            className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 p-0.5 sm:p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200"
                             aria-label="Remove file"
                           >
-                            <X size={10} className="text-white" />
+                            <X
+                              size={8}
+                              className="sm:w-2.5 sm:h-2.5 text-white"
+                            />
                           </button>
                         </div>
                       )}
-                      <div className="text-xs text-zinc-400 mt-1 truncate max-w-16 text-center">
-                        {file.name.length > 8
-                          ? `${file.name.substring(0, 6)}...`
+                      <div className="text-xs text-zinc-400 mt-1 truncate max-w-12 sm:max-w-16 text-center">
+                        {file.name.length > 6
+                          ? `${file.name.substring(0, 4)}...`
                           : file.name}
                       </div>
                     </div>
@@ -283,24 +292,24 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
                   fileInputRef.current.value = "";
                 }
               }}
-              className="flex gap-2 sm:gap-3 p-3 sm:p-4"
+              className="flex gap-1.5 sm:gap-2 md:gap-3 p-2 sm:p-3 md:p-4"
             >
               <Input
                 placeholder="What would you like to learn today?"
                 value={input}
                 onChange={handleInputChange}
-                className="bg-zinc-700/40 border-zinc-600/50 text-white placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-amber-500/50 rounded-xl sm:rounded-2xl text-sm sm:text-base h-10 sm:h-12 transition-all duration-200"
+                className="bg-zinc-700/40 border-zinc-600/50 text-white placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-amber-500/50 rounded-lg sm:rounded-xl md:rounded-2xl text-sm sm:text-base h-9 sm:h-10 md:h-12 transition-all duration-200 min-w-0 flex-1"
                 disabled={status === "streaming"}
               />
 
               <Button
-                className="hover:bg-zinc-600/80 rounded-xl sm:rounded-2xl border border-zinc-600/50 bg-zinc-700/60 h-10 sm:h-12 px-3 sm:px-4 transition-all duration-200"
+                className="hover:bg-zinc-600/80 rounded-lg sm:rounded-xl md:rounded-2xl border border-zinc-600/50 bg-zinc-700/60 h-9 sm:h-10 md:h-12 px-2 sm:px-3 md:px-4 transition-all duration-200 flex-shrink-0"
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
                 type="button"
                 disabled={files && files.length >= 5}
               >
-                <Paperclip className="text-zinc-300" size={18} />
+                <Paperclip className="text-zinc-300 w-4 h-4 sm:w-5 sm:h-5" />
                 <Input
                   type="file"
                   onChange={(e) => {
@@ -317,20 +326,20 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
 
               <Button
                 type="submit"
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-medium rounded-xl sm:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 h-10 sm:h-12 px-4 sm:px-6"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-medium rounded-lg sm:rounded-xl md:rounded-2xl transition-all duration-200 hover:shadow-lg hover:shadow-amber-500/25 disabled:opacity-50 h-9 sm:h-10 md:h-12 px-3 sm:px-4 md:px-6 flex-shrink-0"
                 disabled={status === "streaming"}
               >
                 {status === "streaming" ? (
-                  <Loader2Icon size={18} className="animate-spin" />
+                  <Loader2Icon className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                 ) : (
-                  <SendHorizontal size={18} />
+                  <SendHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </Button>
             </form>
 
             {/* Mode selector */}
-            <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-              <div className="flex h-9 sm:h-10 rounded-full p-1">
+            <div className="px-2 sm:px-3 md:px-4 pb-2 sm:pb-3 md:pb-4">
+              <div className="flex h-8 sm:h-9 md:h-10 rounded-full p-1">
                 {Object.entries(modes).map(([key, value]) => {
                   const isActive = mode === key;
                   const Icon = value.icon;
@@ -341,15 +350,22 @@ const Chat = ({ user, chatId, initialMessages = [] }: ChatProps) => {
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        "flex items-center gap-2 rounded-full transition-all duration-200 text-xs sm:text-sm h-7 sm:h-8 px-3 sm:px-4",
+                        "flex items-center gap-1 sm:gap-2 rounded-full transition-all duration-200 text-xs sm:text-sm h-6 sm:h-7 md:h-8 px-2 sm:px-3 md:px-4 flex-1 sm:flex-none justify-center sm:justify-start",
                         isActive
                           ? "bg-zinc-600/80 text-white shadow-sm"
                           : "hover:bg-zinc-600/40 text-zinc-400 hover:text-zinc-200"
                       )}
                       onClick={() => setMode(key)}
                     >
-                      <Icon className={isActive ? value.color : ""} size={16} />
-                      <span className="hidden sm:inline">{value.label}</span>
+                      <Icon
+                        className={cn(
+                          "w-3 h-3 sm:w-4 sm:h-4",
+                          isActive ? value.color : ""
+                        )}
+                      />
+                      <span className="hidden xs:inline sm:inline truncate">
+                        {value.label}
+                      </span>
                     </Button>
                   );
                 })}
